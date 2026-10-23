@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bin Setup</title><style>
+:root{font:16px system-ui,sans-serif;color:#172c38;background:#f2f5f7}*{box-sizing:border-box}body{margin:0}header{padding:22px 32px;background:#123347;color:white;display:flex;justify-content:space-between;align-items:center}h1{font-size:25px;margin:0}header p{margin:5px 0 0;color:#c4d9e5}main{max-width:1320px;margin:auto;padding:24px;display:grid;grid-template-columns:300px 1fr;gap:20px}section,aside{background:white;border:1px solid #dbe4e9;border-radius:12px;padding:22px}h2{font-size:20px;margin:0 0 16px}h3{font-size:17px}p{line-height:1.55}.muted{color:#5b6e79;font-size:14px}label{display:block;font-size:14px;margin:16px 0 6px}input,select,button{font:inherit;border-radius:7px;border:1px solid #b9cbd5;padding:10px;max-width:100%}input,select{width:100%;background:white}button{cursor:pointer;background:#eaf0f4;color:#16374a;margin:5px 5px 5px 0}button.primary{background:#087a68;color:white;border-color:#087a68}button.danger{color:#9c2828;background:#fff3f3;border-color:#e8b6b6}button:disabled{cursor:default;opacity:.45}.actions{display:flex;flex-wrap:wrap;align-items:center;margin:12px 0}.workspace{display:grid;gap:20px}.pill{display:inline-block;background:#eaf4f1;color:#175f51;padding:5px 10px;border-radius:20px;font-size:13px;margin:4px 4px 4px 0}.stage{border-left:3px solid #dae4e8;padding:9px 12px;margin:2px 0;font-size:14px}.stage.current{border-color:#087a68;background:#eaf4f1}.stage.done{color:#658071}.instructions{font-size:18px;white-space:pre-line}.bins{display:flex;flex-wrap:wrap;gap:24px;margin:20px 0}.bin{flex:1;min-width:200px;text-align:center}.notice{padding:13px;border-radius:7px;background:#fff4da;white-space:pre-wrap}.error{background:#fff0ef;color:#923d35}.good{background:#e7f5ec;color:#22623c}progress{width:100%;height:14px;accent-color:#087a68}pre{white-space:pre-wrap;word-break:break-word;background:#f5f7f9;padding:14px;max-height:240px;overflow:auto;font-size:12px}#preview{max-width:100%;max-height:480px;border-radius:8px}details{margin:12px 0}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px;border-bottom:1px solid #e2e9ec;text-align:left}.camera-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.camera-summary h2{margin-bottom:6px}.camera-checks{list-style:none;margin:16px 0 0;padding:0}.camera-checks li{padding:12px 0;border-top:1px solid #e2e9ec}.camera-check-title{display:flex;justify-content:space-between;gap:12px;font-size:14px}.camera-check-state{white-space:nowrap;font-weight:600}.camera-check-state.ok{color:#22623c}.camera-check-state.missing{color:#923d35}.camera-checks p{margin:5px 0 0;font-size:14px}.camera-action{color:#704900}.hidden{display:none!important}@media(max-width:800px){main{grid-template-columns:1fr;padding:12px}header{padding:18px}aside{order:0}}
+#configurationHelp,#configurationIssueText,#sessionDetails{overflow-wrap:anywhere}
+.bins{gap:16px;align-items:stretch}.bin{flex:1 1 240px;min-width:240px;padding:16px 10px 8px;border:1px solid #dae4e8;border-radius:10px;background:#fafcfd}.bin.active{border-color:#d3a03d;background:#fffdf7}.bin-title{display:block;font-size:17px;overflow-wrap:anywhere}.bin-caption{margin:0 0 8px;font-size:14px;min-height:38px}.bin-diagram{display:block;width:100%;max-width:340px;margin:0 auto}.wall-label{fill:#536771;font:13px system-ui,sans-serif}.wall-label.active{fill:#875000;font-weight:700}.placement-legend{flex-basis:100%;margin:0;font-size:14px;line-height:1.5;color:#536771}.legend-key{display:inline-flex;align-items:center;gap:6px;margin:4px 16px 4px 0}.legend-swatch{display:inline-block;width:18px;height:12px;background:#f6bc5180;border:1px dashed #ae6c00}.legend-swatch.wall{background:#d39a2f;border:0;height:5px}.legend-swatch.part{position:static;width:18px;height:8px;transform:none;background:#b17026;border:1px solid #68451e}.diagram-empty{fill:#71818a;font:14px system-ui,sans-serif}
+</style></head><body>
+<header><div><h1>Bin Setup</h1><p>UI on local PC · Collect scenes · Fit and validate the bin model</p></div><span id="connection">Connecting…</span></header>
+<main><aside><h2>Collection session</h2><p id="setupSummary" class="muted">Select the scene and its configured bin layout.</p>
+<label for="sceneInput">Scene</label><select id="sceneInput"></select>
+<label for="cameraCalibration">Camera calibration</label><select id="cameraCalibration"></select>
+<label for="robotCalibration">Reference frame</label><select id="robotCalibration"></select>
+<label for="layoutInput">Bin layout</label><select id="layoutInput"></select>
+<label>Bins to collect</label><div id="binSelection"></div>
+<p id="configurationHelp" class="muted"></p>
+<details id="configurationIssues" class="hidden"><summary>Configuration files to review</summary><p id="configurationIssueText" class="muted"></p></details>
+<label for="name">Session name (optional)</label><input id="name" placeholder="resistor-baseline" maxlength="80">
+<label for="exposureInput">Capture exposures (ms)</label><input id="exposureInput" value="4, 8, 12, 16, 20"><p class="muted">Each value applies to spotlight and structured light on both cameras.</p><div class="actions"><button id="prepare" class="primary">New setup</button><button id="check">New empty check</button></div>
+<label for="sessions">Saved sessions</label><select id="sessions"><option value="">Choose a session</option></select><button id="open">Open session</button>
+<p id="storage" class="muted"></p><hr><h3>Scene guide</h3><div id="stages" class="muted">Prepare a session to begin.</div>
+<details><summary>Station requirements</summary><p class="muted">Keep production stopped while collecting. Camera and Eyes depth services must be running. Park the arm outside the camera view. This application does not move the robot.</p></details>
+</aside><div class="workspace">
+<section aria-labelledby="cameraHeading">
+<div class="camera-summary"><div><h2 id="cameraHeading">Camera connection</h2><p id="cameraRuntime" class="muted">The local app checks the camera and Eyes depth services before collection.</p></div><button id="checkConnection" disabled>Check connection</button></div>
+<div id="cameraStatus" class="notice" role="status" aria-live="polite">Camera connection has not been checked.</div>
+<details id="cameraDetails" class="hidden"><summary>Connection details</summary><ul id="cameraChecks" class="camera-checks" aria-label="Camera readiness checks"></ul></details>
+<p id="cameraCheckedAt" class="muted"></p>
+<p class="muted">Checking the connection does not capture images or move the robot. Collection needs both stereo sensors and the selected scene’s depth service; a running Perception workflow is not required.</p>
+</section>
+<section><h2 id="title">Prepare a new bin setup</h2><p id="sessionDetails" class="muted"></p><div id="exposures"></div><p id="instructions" class="instructions">New setup collects all selected bins together. After empty captures, place exactly one resistor in each bin at the same named location: center, each of the four walls, then the indicated corner. Each location has three arrangements; rotate or reposition each resistor between arrangements. Finally collect three normal and three full arrangements, using your usual production fill amounts without an exact count.</p>
+<div id="bins" class="bins"></div><p id="progressText" class="muted"></p><progress id="progress" value="0" max="1"></progress>
+<p id="retry" class="notice hidden">This scene has an interrupted capture. Ready will preserve that attempt and retake the whole scene. Prepare the pictured arrangement again.</p>
+<div class="actions"><button id="ready" class="primary" disabled>Scene ready — capture exposures</button><button id="previewButton" disabled>Preview cameras</button><button id="stop" class="danger" disabled>Stop after current capture</button></div>
+<p class="muted">Follow the current stage's instructions for every bin. Leave all parts unchanged while exposures are captured. Before the next arrangement, rotate or reposition the instructed parts, then click Ready. Each arrangement gets its own exposure sweep.</p>
+<div id="error" class="notice error hidden" role="alert"></div><div id="message" class="notice hidden" aria-live="polite"></div>
+<figure id="previewFigure" class="hidden"><img id="preview" alt="Fresh top-down depth preview of the configured bins"><figcaption id="previewCaption" class="muted"></figcaption></figure>
+</section>
+<section><h2>Train and validate</h2><p class="muted">Fit the empty-bin geometry and camera corrections, then replay the saved empty, resistor and filled scenes through the production detector. The model is saved as JSON metadata and binary numerical arrays.</p>
+<div class="actions"><button id="build" class="primary" disabled>Build and validate</button><button id="review" disabled>Review saved results</button><button id="quick" disabled>Validate empty check</button></div>
+<div id="acceptance"></div><div class="actions"><button id="activate" disabled>Use this model</button><button id="rollback">Restore previous model</button></div>
+<p class="muted">Use this model requires passed physical validation and an available Perception reload service. It verifies the loaded model identity and restores the previous configuration if activation fails.</p>
+<details open><summary>Activity</summary><pre id="log">Waiting for a session.</pre></details>
+</section></div></main>
+<script>
+const token='__API_TOKEN__';let state=null,acceptance=null,lastResult=null,pending=false,connected=false;
+const $=id=>document.getElementById(id);const text=(id,value)=>$(id).textContent=value;
+async function command(command,values={}){if(command==='build'||command==='quick_check'){acceptance=null;$('acceptance').replaceChildren();}pending=true;renderButtons();try{const r=await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json','X-Bin-Setup-Token':token},body:JSON.stringify({command,...values})});const value=await r.json();if(!r.ok)throw Error(value.error);await refresh();}catch(e){text('error',e.message);$('error').classList.remove('hidden');}finally{pending=false;renderButtons();}}
+function selectedBins(){return [...$('binSelection').querySelectorAll('input:checked')].map(item=>item.value);}
+function setupRequest(quick=false){return {name:$('name').value.trim(),quick,scene_id:Number($('sceneInput').value),camera_calibration:$('cameraCalibration').value,robot_calibration:$('robotCalibration').value,bin_config:$('layoutInput').value,bin_ids:selectedBins(),exposures_ms:$('exposureInput').value.split(',').map(x=>Number(x.trim()))};}
+$('prepare').onclick=()=>command('prepare',setupRequest());$('check').onclick=()=>command('prepare',setupRequest(true));
+$('open').onclick=()=>{acceptance=null;lastResult=null;command('select',{session_path:$('sessions').value});};
+$('ready').onclick=()=>command('capture_stage',{stage_id:state.current_stage.id,ready_token:state.ready_token});
+$('checkConnection').onclick=()=>command('check_connection',{scene_id:Number($('sceneInput').value)});
+$('previewButton').onclick=()=>command('preview');$('stop').onclick=()=>command('stop');$('build').onclick=()=>command('build');$('review').onclick=()=>command('review');$('quick').onclick=()=>command('quick_check');$('activate').onclick=()=>command('activate');$('rollback').onclick=()=>command('rollback');
+function renderButtons(){
+  const busy=pending||!connected||!state||state.busy,has=!!state?.session;
+  const done=has&&!state.current_stage,check=state?.session?.mode==='check';
+  const camera=state?.camera_connection,cameraReady=camera?.ready===true&&!camera?.checking;
+  for(const id of ['prepare','check','open','rollback'])$(id).disabled=busy;
+  for(const id of ['sceneInput','cameraCalibration','robotCalibration','layoutInput','name','exposureInput'])$(id).disabled=busy;
+  for(const input of $('binSelection').querySelectorAll('input'))input.disabled=busy;
+  const configured=!!$('cameraCalibration').value&&!!$('robotCalibration').value&&!!$('layoutInput').value&&selectedBins().length>0;
+  $('prepare').disabled=busy||!configured;$('check').disabled=busy||!configured;
+  $('open').disabled=busy||!$('sessions').value;
+  $('rollback').disabled=busy||!state?.catalog?.active?.history?.length;
+  $('checkConnection').disabled=busy||!!camera?.checking;
+  $('checkConnection').textContent=camera?.checking?'Checking…':'Check connection';
+  $('ready').disabled=busy||!state?.current_stage||!cameraReady;
+  $('previewButton').disabled=busy||!state?.current_stage||!cameraReady;
+  $('stop').disabled=!connected||state?.active_command!=='capture_stage'||state?.stop_requested;
+  $('build').disabled=busy||!done||check;
+  $('quick').disabled=busy||!done||!check;
+  $('review').disabled=busy||!state?.review_exists;
+  const passed=acceptance?.status==='passed'&&acceptance?.purpose==='factory_acceptance'&&acceptance?.pipeline==='production_summit'&&!acceptance?.synthetic&&acceptance?.results?.length&&!acceptance?.missing_evidence?.length&&acceptance.results.every(x=>x.passed);
+  $('activate').disabled=busy||!passed;
+}
+function setOptions(id,entries,preferred,empty){
+  const select=$(id),value=select.value;
+  select.replaceChildren(...entries.map(item=>new Option(item.label,String(item.value))));
+  if(!entries.length){select.add(new Option(empty,''));return;}
+  select.value=entries.some(item=>String(item.value)===value)?value:entries.some(item=>String(item.value)===String(preferred))?String(preferred):String(entries[0].value);
+}
+function renderConfiguration(reset=false){
+  const config=state?.catalog?.configuration;if(!config)return;
+  const signature=JSON.stringify(config);
+  if(reset||$('sceneInput').dataset.signature!==signature){
+    setOptions('sceneInput',config.scenes.map(scene=>({value:scene,label:'Scene '+scene})),config.defaults.scene_id,'No configured scenes');
+    $('sceneInput').dataset.signature=signature;
+  }
+  const scene=Number($('sceneInput').value),defaults=config.defaults;
+  const eyesScene=config.eyes_workflow?.scenes.find(item=>item.scene_id===scene);
+  setOptions('cameraCalibration',config.camera_calibrations.filter(item=>item.path===eyesScene?.camera_calibration).map(item=>({value:item.path,label:item.label})),defaults.camera_calibration,'Scene missing from Eyes workflow');
+  const frames=config.robot_calibrations.filter(item=>item.scene_ids.includes(scene));
+  setOptions('robotCalibration',frames.map(item=>({value:item.path,label:item.label})),defaults.robot_calibration,'No calibrated reference frame');
+  const frame=frames.find(item=>item.path===$('robotCalibration').value)?.label;
+  const layouts=config.layouts.filter(item=>item.scene_id===scene&&item.frame_id===frame);
+  setOptions('layoutInput',layouts.map(item=>({value:item.path,label:item.label+' · '+item.bin_ids.length+' bin'+(item.bin_ids.length===1?'':'s')})),defaults.bin_config,'No layout for this scene/frame');
+  const layout=layouts.find(item=>item.path===$('layoutInput').value);
+  const binSignature=JSON.stringify(layout?[layout.path,layout.bin_ids]:null);
+  if($('binSelection').dataset.signature!==binSignature){
+    $('binSelection').replaceChildren();$('binSelection').dataset.signature=binSignature;
+    for(const bin of layout?.bin_ids||[]){const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.checked=layout.path!==defaults.bin_config||!defaults.bin_ids||defaults.bin_ids.includes(bin);input.value=bin;input.style.width='auto';input.style.marginRight='8px';input.onchange=()=>{renderConfiguration();renderButtons();};label.append(input,document.createTextNode(bin));$('binSelection').append(label);}
+  }
+  const bins=selectedBins();
+  text('setupSummary',layout?'Scene '+scene+' · '+bins.length+' bin'+(bins.length===1?'':'s')+' · '+frame+' frame':'Select the scene and its configured bin layout.');
+  const missing=[];
+  if(!eyesScene)missing.push('Configure this scene in artifacts/workflow_configs/bin_calibration.yaml using its deployed camera calibration.');
+  if(!frame)missing.push('The reference frame needs an existing hand-eye calibration entry for this scene.');
+  if(!layout)missing.push('Configure a bin layout with this scene_id and frame_id under artifacts/data_saving/bin_model/layouts/.');
+  else if(!bins.length)missing.push('Select at least one bin to collect.');
+  text('configurationHelp',missing.length?missing.join(' '):'Bins: '+bins.join(', ')+'. Eyes uses artifacts/workflow_configs/bin_calibration.yaml and its deployed camera calibration.');
+  text('configurationIssueText',(config.issues||[]).join('\n'));$('configurationIssues').classList.toggle('hidden',!config.issues?.length);
+}
+for(const id of ['sceneInput','cameraCalibration','robotCalibration','layoutInput'])$(id).onchange=()=>{renderConfiguration();renderButtons();};
+function renderCameraConnection(){
+  const camera=state?.camera_connection||{},panel=$('cameraStatus');
+  let label,message,kind='';
+  if(!connected){
+    label='Local app connection lost';
+    message='Wait for the local Bin Setup app to reconnect before checking the cameras.';
+    kind='error';
+  }else if(camera.checking){
+    label='Checking camera connection…';
+    message='Waiting for camera status and the Eyes depth service. No images are being captured.';
+  }else if(camera.ready===true){
+    label='Cameras ready';message=camera.message||'Both cameras and the Eyes depth service are available.';kind='good';
+  }else if(camera.ready===false){
+    label='Camera connection needs attention';
+    message=camera.message||'Resolve the items below, then check the connection again.';kind='error';
+  }else{
+    label='Camera connection not checked';
+    message='Check the connection before previewing or collecting a scene.';
+  }
+  panel.className='notice'+(kind?' '+kind:'');panel.textContent=label+'\n'+message;
+  $('cameraChecks').replaceChildren();
+  if(connected){
+    for(const check of camera.checks||[]){
+      const row=document.createElement('li'),heading=document.createElement('div');heading.className='camera-check-title';
+      const label=document.createElement('strong');label.textContent=check.label||check.id||'Camera check';
+      const status=document.createElement('span');status.className='camera-check-state'+(check.ready===true?' ok':check.ready===false?' missing':'');
+      status.textContent=check.ready===true?'Ready':check.ready===false?'Needs attention':'Not checked';
+      heading.append(label,status);row.append(heading);
+      if(check.message){const detail=document.createElement('p');detail.className='muted';detail.textContent=check.message;row.append(detail);}
+      if(check.ready!==true&&check.action){const action=document.createElement('p');action.className='camera-action';action.textContent=check.action;row.append(action);}
+      $('cameraChecks').append(row);
+    }
+  }
+  const phase=!connected?'disconnected':camera.checking?'checking':camera.ready===true?'ready':camera.ready===false?'missing':'unknown';
+  const details=$('cameraDetails');
+  details.classList.toggle('hidden',!$('cameraChecks').children.length);
+  if(details.dataset.phase!==phase){details.open=phase!=='ready';details.dataset.phase=phase;}
+  const runtime=typeof camera.runtime==='string'?camera.runtime:camera.runtime?.label;
+  text('cameraRuntime',(camera.scene_id!==undefined?'Scene '+camera.scene_id+' · ':'')+(runtime?runtime:'UI on this PC · Camera and Eyes depth services provide acquisition.'));
+  const checked=camera.checked_at?new Date(camera.checked_at):null;
+  text('cameraCheckedAt',checked&&!Number.isNaN(checked.getTime())?'Last checked '+checked.toLocaleString():'');
+}
+$('sessions').onchange=renderButtons;
+const wallLabels={left:'Left (−X)',right:'Right (+X)',bottom:'Bottom (−Y)',top:'Top (+Y)'};
+function wallSide(bin){return bin.placement==='wall'?(bin.wall_side||'left'):null;}
+function stageTitle(stage){
+  const wall=Object.values(stage.bins||{}).find(bin=>bin.placement==='wall');
+  return wall?stage.title.replace(/, wall(?=\s|$)/,', '+wallSide(wall)+' wall'):stage.title;
+}
+function svgElement(tag,attributes={},content){
+  const element=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const [name,value] of Object.entries(attributes))element.setAttribute(name,value);
+  if(content!==undefined)element.textContent=content;
+  return element;
+}
+function diagrams(stage){
+  $('bins').replaceChildren();if(!stage)return;
+  for(const [name,bin] of Object.entries(stage.bins)){
+    const side=wallSide(bin),active=bin.part_count===1;
+    const placement=side?(wallLabels[side]||side)+' wall':bin.placement==='corner'?'Bottom-left (−X, −Y) corner':'Center';
+    const caption=active?'One resistor · '+placement:bin.label==='empty'?'Empty · remove every part':bin.placement==='full'?'Your normal full load':'Your normal working load';
+    const panel=document.createElement('div');panel.className='bin'+(active?' active':'');
+    const title=document.createElement('strong');title.className='bin-title';title.textContent=name;
+    const label=document.createElement('p');label.className='bin-caption muted';label.textContent=caption;panel.append(title,label);
+    const diagram=svgElement('svg',{class:'bin-diagram',viewBox:'0 0 340 310',role:'img','aria-label':name+': '+caption+'. Schematic top view in bin-local coordinates.'});
+    diagram.append(svgElement('title',{},name+': '+caption));
+    diagram.append(svgElement('rect',{x:62,y:50,width:216,height:204,rx:20,fill:'#edf2f5',stroke:'#bdcbd4','stroke-width':20}));
+    const wallLines={left:[62,77,62,227],right:[278,77,278,227],bottom:[88,254,252,254],top:[88,50,252,50]};
+    for(const highlighted of side?[side]:bin.placement==='corner'?['left','bottom']:[]){
+      const line=wallLines[highlighted];if(line)diagram.append(svgElement('line',{x1:line[0],y1:line[1],x2:line[2],y2:line[3],stroke:'#d39a2f','stroke-width':9,'stroke-linecap':'round',class:'active-wall','data-wall':highlighted}));
+    }
+    for(const [wall,x,y,rotation] of [['top',170,24,0],['bottom',170,287,0],['left',25,152,-90],['right',315,152,90]]){
+      diagram.append(svgElement('text',{x,y,'text-anchor':'middle',class:'wall-label'+(wall===side?' active':''),transform:rotation?'rotate('+rotation+' '+x+' '+y+')':''},wallLabels[wall]));
+    }
+    if(bin.target_region_fraction){
+      const [x0,y0,x1,y1]=bin.target_region_fraction;
+      // Fractions refer to the interior floor, excluding the rim. SVG Y points down.
+      const x=72+196*x0,y=60+184*(1-y1),width=196*(x1-x0),height=184*(y1-y0),cx=x+width/2,cy=y+height/2;
+      diagram.append(svgElement('rect',{x,y,width,height,rx:3,fill:'#f6bc5180',stroke:'#ae6c00','stroke-width':2,'stroke-dasharray':'5 3',class:'target-region'}));
+      const part=svgElement('g',{transform:'translate('+cx+' '+cy+')',class:'example-resistor'});
+      part.append(svgElement('line',{x1:-14,y1:0,x2:14,y2:0,stroke:'#68451e','stroke-width':2}));
+      part.append(svgElement('rect',{x:-8,y:-4,width:16,height:8,rx:2,fill:'#b17026',stroke:'#68451e','stroke-width':1.5}));
+      part.append(svgElement('line',{x1:-3,y1:-4,x2:-3,y2:4,stroke:'#ead3a1','stroke-width':2}));
+      diagram.append(part);
+    }else if(bin.label==='loaded'){
+      const firstRow=bin.placement==='normal'?2:0;
+      for(let row=firstRow;row<5;row++)for(let column=0;column<5;column++){
+        diagram.append(svgElement('rect',{x:85+column*34,y:76+row*33,width:22,height:10,rx:3,fill:'#b88a55',stroke:'#8d663f',transform:'rotate('+((row+column)%2?24:-18)+' '+(96+column*34)+' '+(81+row*33)+')',opacity:.8}));
+      }
+    }else diagram.append(svgElement('text',{x:170,y:158,'text-anchor':'middle',class:'diagram-empty'},'Keep empty'));
+    panel.append(diagram);$('bins').append(panel);
+  }
+  const legend=document.createElement('div');legend.className='placement-legend';
+  for(const [kind,label] of [['region','Place on highlighted floor'],['wall','Selected wall'],['part','Example resistor position']]){
+    const item=document.createElement('span');item.className='legend-key';const swatch=document.createElement('span');swatch.className='legend-swatch '+kind;item.append(swatch,document.createTextNode(label));legend.append(item);
+  }
+  const note=document.createElement('p');note.style.margin='5px 0 0';note.textContent='Schematic top view in bin-local coordinates: +X right, +Y up. Place the resistor inside the highlighted floor area, not on the rim or side wall. The icon is an example, not a detected position. Camera images may have a different orientation.';legend.append(note);$('bins').append(legend);
+}
+function showAcceptance(report){acceptance=report;const panel=$('acceptance');panel.replaceChildren();const result=document.createElement('p');result.className='notice '+(report.status==='passed'?'good':'error');const failed=(report.results||[]).filter(x=>!x.passed);result.textContent=(report.status==='passed'?'Validation passed':'Validation failed')+' · '+(report.model_name||'')+' · '+report.capture_count+' captures'+(report.synthetic?' · synthetic development data':'')+' · '+failed.length+' failed bin checks';panel.append(result);if(report.missing_evidence?.length){const p=document.createElement('p');p.textContent='Missing evidence: '+report.missing_evidence.join(', ');panel.append(p);}if(failed.length){const table=document.createElement('table');for(const item of failed){const row=table.insertRow();for(const value of [item.capture_id,item.bin_id,item.exposure_ms+' ms',(item.reasons||[]).join('; ')])row.insertCell().textContent=value;}panel.append(table);}const p=document.createElement('p');p.className='muted';p.textContent='Tested exposure settings: '+(report.exposures_ms||[]).join(', ')+' ms. Intermediate settings and other lighting conditions need their own evidence.';panel.append(p);}
+function render(){const s=state;renderConfiguration();const sessionChanged=$('title').dataset.session!==s.session_path;if(sessionChanged){acceptance=null;lastResult=null;$('acceptance').replaceChildren();$('previewFigure').classList.add('hidden');$('title').dataset.session=s.session_path||'';}text('connection',s.busy?'Working…':'Local app ready');renderCameraConnection();text('storage',s.storage_free_gb+' GB available');const selected=$('sessions').value;const paths=s.catalog.sessions;const signature=JSON.stringify(paths);if($('sessions').dataset.signature!==signature){$('sessions').replaceChildren(new Option('Choose a session',''),...paths.map(path=>new Option(path.split('/').pop(),path)));$('sessions').dataset.signature=signature;$('sessions').value=paths.includes(selected)?selected:s.session_path||'';}text('title',s.session?s.session.session_id:'Prepare a new bin setup');text('sessionDetails',s.session?'Scene '+s.session.scene_id+' · '+s.session.frame_id+' frame · '+(s.session.bin_ids||Object.keys(s.session.stages?.[0]?.bins||{})).join(', '):'');$('stages').replaceChildren();for(const stage of s.stages){const div=document.createElement('div');div.className='stage '+(stage.id===s.current_stage?.id?'current':stage.finished?'done':'');div.textContent=stageTitle(stage)+' · '+stage.completed+'/'+stage.total;$('stages').append(div);}if(s.session){text('instructions',s.current_stage?s.current_stage.instructions:'All collection scenes are complete. Build and validate the model below.');diagrams(s.current_stage);$('exposures').replaceChildren(...[...new Set(s.session.captures.map(c=>c.exposure_ms))].map(e=>{const span=document.createElement('span');span.className='pill';span.textContent=e+' ms';return span;}));}text('progressText',s.total?s.completed+' / '+s.total+' captures saved'+(s.busy?' · leave the current scene unchanged':''):'');$('progress').max=s.total||1;$('progress').value=s.completed;$('retry').classList.toggle('hidden',!s.current_stage?.completed||s.busy);text('error',s.error||'');$('error').classList.toggle('hidden',!s.error);text('log',s.logs.join('\n')||'Waiting for a session.');const result=JSON.stringify(s.result);if(s.result&&result!==lastResult){lastResult=result;if(s.result.preview_png){$('preview').src='data:image/png;base64,'+s.result.preview_png;text('previewCaption',s.result.caption);$('previewFigure').classList.remove('hidden');}if(s.result.acceptance)showAcceptance(s.result.acceptance);if(s.result.runtime_verified){text('message','Model loaded and verified: '+s.result.model_path);$('message').classList.remove('hidden');}}renderButtons();}
+async function refresh(){
+  try{
+    const response=await fetch('/api/state');if(!response.ok)throw Error('Connection failed');
+    state=await response.json();connected=true;render();
+  }catch(error){
+    connected=false;text('connection','Disconnected — reconnecting');renderCameraConnection();renderButtons();
+  }
+}
+refresh();setInterval(refresh,1000);
+</script></body></html>

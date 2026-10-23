@@ -1,0 +1,6 @@
+numpy
+PyYAML
+opencv-python-headless
+# CaptureData writes Float32 EXR; fallback when OpenCV has no EXR codec.
+OpenEXR>=3.2
+# Optional: install open3d separately for the viewer, CAD meshes, and PLY cloud imports.
