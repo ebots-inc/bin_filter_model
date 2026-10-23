@@ -230,6 +230,91 @@ It processes saved files without starting a Perception node. Model, capture,
 calibration and output paths must be visible through that container's bind
 mounts. Keep the executable and model-loading libraries from the same build.
 
+## GPU processing and replay timing
+
+After rebuilding Perception, the calibrated bin pipeline defaults to GPU camera
+correction/background classification and a reduced input for measured-rim
+registration. These optional settings belong at the top level of
+`config/pose_estimation/contour_summit_pose_params.yaml`:
+
+```yaml
+use_gpu_bin_filter: true
+use_reduced_registration_input: true
+```
+
+Camera profile arrays remain on the GPU between requests. Correction and
+classification preserve the CPU model's exposure, gain, black-level, uncertainty,
+and unknown-cell checks. These bin-filter steps avoid downloading the full
+cloud; registration transfers a selected subset to the CPU. Its selection retains
+a conservative neighborhood of the measured lip and boundary, including the
+alignment search margin. Full-resolution foreground classification
+still uses the corrected scene cloud. Registration changes model lookup
+coordinates, not the returned scene points. CPU input and legacy models retain
+their existing CPU filtering path. Setting either option to `false` provides
+the previous path for comparison. Reload the workflow or restart Perception after
+changing pipeline settings.
+
+Use the native `summit_replay` executable **inside the Perception container** to
+measure saved-depth processing. No running camera, Eyes, or Perception node is
+needed. First set `model_bundle` and `capture_dir` to the actual completed model
+and saved capture directories visible in that container. The following example
+uses a scene-0 `bin_a` capture at 8 ms; adjust the scene, bin, exposure, gain, and
+black level to the capture's metadata:
+
+```bash
+source /opt/ros/humble/setup.bash
+source /root/perception/workspace/install/setup.bash
+
+model_bundle=/absolute/path/to/candidate/model
+capture_dir=/absolute/path/to/completed/capture
+replay=/root/perception/workspace/install/perception_node/lib/perception_node/summit_replay
+
+replay_inputs=(
+  --model "$model_bundle"
+  --camera-calibration "$capture_dir/calibration/camera.yaml"
+  --robot-calibration "$capture_dir/calibration/robot.yaml"
+  --config /root/artifacts/config/pose_estimation/contour_summit_pose_params.yaml
+  --depth0 "$capture_dir/depth/Frame0.exr"
+  --depth1 "$capture_dir/depth/Frame1.exr"
+  --scene-id 0 --bin bin_a
+  --exposure-ms 8,8 --gain 0,0 --black-level 240,240
+  --device CUDA:0 --warmup 2 --repeat 20
+)
+
+"$replay" "${replay_inputs[@]}" --gpu-filter on --registration-input reduced \
+  --output /tmp/bin-replay-optimized.json
+"$replay" "${replay_inputs[@]}" --gpu-filter off --registration-input full \
+  --output /tmp/bin-replay-baseline.json
+```
+
+Both runs use the same saved capture and selected GPU. The baseline keeps the
+existing CPU camera correction/classification and full registration input while
+the rest of the pipeline runs on the same device. A pure CPU run uses
+`--device CPU:0`. The host `host_replay.py` validation adapter does not currently
+forward these benchmark options; run the native executable directly as above.
+Capture calibration snapshots reproduce the saved measurement; live operation
+continues to use the deployment calibration under the artifacts folder.
+
+Each benchmark records one cold call separately, performs the requested extra
+warmups, and reports median, p95, and minimum latency across the measured repeats.
+The output JSON includes `benchmark.cold_ms`, `benchmark.warm_ms`,
+`benchmark.stages_ms`, and `benchmark.registration_input_points`.
+`depth_to_cloud` includes camera back-projection, transforms, correction, and
+fusion. The other stages cover registration, background classification, and
+foreground processing/summit extraction. Inspect the result's success/error and
+registration acceptance together with timings; a fast rejected request is not a
+successful pose result. Repeat comparisons on resistor, normal-fill, and full-fill
+captures from every selected bin.
+
+**These measurements start from depth images already loaded on the selected
+device.** They exclude hardware capture/exposure, structured-light depth
+reconstruction, model loading, file I/O, initial input upload, and ROS transport.
+They also exclude the live request's final cache cleanup. RViz is disabled during
+replay. Per-stage GPU synchronization makes stage timings
+comparable but adds measurement overhead. These timings are not the full HMI
+`GetPose` latency and do not demonstrate a 100 ms end-to-end processing budget;
+structured-light reconstruction and service overhead require separate live timing.
+
 ## Activate and run the HMI contour test
 
 For the cell-4 scene-0/B2 layout with `bin_a` and `bin_b`, use the existing
