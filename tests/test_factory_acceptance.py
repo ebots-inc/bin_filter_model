@@ -62,6 +62,73 @@ class ProductionAcceptanceTests(unittest.TestCase):
         result['candidates_robot_mm'] = data.transform_points(np.array([[-80.,0.,5.]]),placement).tolist()
         self.assertTrue(assess_result(result,'loaded',region))
 
+    def test_curved_bowl_guidance_checks_direction_without_inventing_a_floor_edge(self):
+        centers = np.arange(-100., 101., 1.)
+        xx, yy = np.meshgrid(centers[:-1] + .5, centers[:-1] + .5)
+        tolerance = np.where((xx / 90.) ** 2 + (yy / 60.) ** 2 < 1., 1., np.nan)
+        placement = data.pose_matrix([500., -600., -100., 10., 0., 90.])
+        model = {'robot_from_bin': placement.tolist(), 'geometry': {
+            'xy_bounds_mm': [[-100., -100.], [100., 100.]],
+            'seed_xy_mm': [0., 0.], 'x_centers_mm': centers.tolist(), 'y_centers_mm': centers.tolist(),
+            'surface_height_mm': (.01 * (centers[:, None] ** 2 + centers[None, :] ** 2)).tolist(),
+            'tolerance_mm': tolerance.tolist()}}
+
+        def reasons(region, point):
+            candidate = data.transform_points(np.asarray([point]), placement).tolist()
+            result = {'registration': {'attempted': True, 'accepted': True}, 'success': True,
+                      'candidates_robot_mm': candidate}
+            return assess_result(result, 'loaded', region, bin_config=model)
+
+        stages = [
+            ('left', [-35., 5., 10.], [35., 5., 10.]),
+            ('right', [35., 5., 10.], [-35., 5., 10.]),
+            ('bottom', [5., -30., 10.], [5., 30., 10.]),
+            ('top', [5., 30., 10.], [5., -30., 10.]),
+        ]
+        for side, correct, wrong in stages:
+            with self.subTest(side=side):
+                stage = {'placement': 'wall', 'wall_side': side, 'part_count': 1,
+                         'target_region_fraction': [.02, .35, .20, .65]}
+                region = target_bounds(stage, model)
+                self.assertEqual(region['mode'], 'directional')
+                self.assertFalse(region['exact_part_location_verified'])
+                self.assertFalse(region['wall_distance_verified'])
+                self.assertEqual(reasons(region, correct), [])
+                self.assertTrue(reasons(region, wrong))
+                self.assertTrue(reasons(region, [0., 0., 10.]))
+                self.assertTrue(reasons(region, [-80., -50., 10.]))  # Within bounding box, outside bowl support.
+
+        diagonal = target_bounds({'placement': 'corner', 'part_count': 1,
+                                  'target_region_fraction': [.02, .02, .20, .20]}, model)
+        self.assertEqual(reasons(diagonal, [-20., -10., 10.]), [])
+        self.assertTrue(reasons(diagonal, [20., -10., 10.]))
+        self.assertTrue(reasons(diagonal, [-80., -50., 10.]))
+        center = target_bounds({'placement': 'center', 'part_count': 1,
+                                'target_region_fraction': [.35, .35, .65, .65]}, model)
+        self.assertEqual(reasons(center, [0., 0., 10.]), [])
+        self.assertTrue(reasons(center, [60., 0., 10.]))
+
+        # A missing patch inside an otherwise correct directional area is not evidence.
+        missing = np.asarray(model['geometry']['tolerance_mm'])
+        missing[104:107, 63:67] = np.nan
+        model['geometry']['tolerance_mm'] = missing.tolist()
+        left = target_bounds({'placement': 'wall', 'wall_side': 'left', 'part_count': 1,
+                              'target_region_fraction': [.02, .35, .20, .65]}, model)
+        self.assertTrue(reasons(left, [-35., 5., 10.]))
+
+    def test_directional_placement_rejects_unsupported_side_and_missing_geometry(self):
+        model = {'robot_from_bin': np.eye(4).tolist(), 'geometry': {
+            'seed_xy_mm': [0., 0.], 'x_centers_mm': [-10., 0., 10.], 'y_centers_mm': [-10., 0., 10.],
+            'tolerance_mm': [[1., 1.], [1., 1.]]}}
+        stage = {'placement': 'wall', 'part_count': 1, 'target_region_fraction': [.02, .35, .20, .65]}
+        with self.assertRaises(data.DatasetError):
+            target_bounds(stage | {'wall_side': 'backwards'}, model)
+        region = target_bounds(stage, model)
+        result = {'registration': {'attempted': True, 'accepted': True}, 'success': True,
+                  'candidates_robot_mm': [[-5., 0., 1.]]}
+        with self.assertRaises(data.DatasetError):
+            assess_result(result, 'loaded', region)
+
     def test_native_error_and_timeout_preserve_failed_acceptance_and_logs(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

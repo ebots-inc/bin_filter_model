@@ -57,8 +57,12 @@ per resistor location and fill condition. With
 `guided.resistor_capture_mode: simultaneous`, each resistor capture records
 exactly one resistor in every selected bin at the same named location.
 `guided.wall_sides` selects
-`[left, right, bottom, top]`, each with its own stages and interior target region;
-center and the prescribed bottom-left corner are separate locations.
+`[left, right, bottom, top]`, each with its own directional stages;
+center and the bottom-left diagonal are separate locations. Historical diagonal
+stages keep their `corner` IDs. Saved `target_region_fraction` values preserve
+the original schematic guidance; they are not measured resistor annotations.
+Production acceptance reports `operator_confirmed_directional` evidence and
+checks broad directions inside the reliable measured bowl footprint.
 Each arrangement has one exposure sweep and one Ready confirmation.
 Empty training and validation repetitions are
 unchanged. Existing saved recipes and plans retain their recorded grouping;
@@ -91,7 +95,9 @@ It does not pool camera errors into one shared uncertainty threshold. Python
 validation exports diagnostics; native replay evaluates the actual detector,
 including registration and production postfilters. Empty scenes must produce no
 pick target with successful registration; resistor scenes must produce a
-target inside each bin's measured interior placement region. All selected bins
+target near the center or in the instructed broad direction, inside each bin's
+reliable measured bowl footprint. These checks use operator-confirmed contents;
+exact resistor footprints were not independently annotated. All selected bins
 are evaluated separately even when they share the same capture. Normal/full scenes must
 produce targets. Every prescribed stage must cover every measured exposure.
 

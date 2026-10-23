@@ -3,7 +3,7 @@
 <title>Bin Setup</title><style>
 :root{font:16px system-ui,sans-serif;color:#172c38;background:#f2f5f7}*{box-sizing:border-box}body{margin:0}header{padding:22px 32px;background:#123347;color:white;display:flex;justify-content:space-between;align-items:center}h1{font-size:25px;margin:0}header p{margin:5px 0 0;color:#c4d9e5}main{max-width:1320px;margin:auto;padding:24px;display:grid;grid-template-columns:300px 1fr;gap:20px}section,aside{background:white;border:1px solid #dbe4e9;border-radius:12px;padding:22px}h2{font-size:20px;margin:0 0 16px}h3{font-size:17px}p{line-height:1.55}.muted{color:#5b6e79;font-size:14px}label{display:block;font-size:14px;margin:16px 0 6px}input,select,button{font:inherit;border-radius:7px;border:1px solid #b9cbd5;padding:10px;max-width:100%}input,select{width:100%;background:white}button{cursor:pointer;background:#eaf0f4;color:#16374a;margin:5px 5px 5px 0}button.primary{background:#087a68;color:white;border-color:#087a68}button.danger{color:#9c2828;background:#fff3f3;border-color:#e8b6b6}button:disabled{cursor:default;opacity:.45}.actions{display:flex;flex-wrap:wrap;align-items:center;margin:12px 0}.workspace{display:grid;gap:20px}.pill{display:inline-block;background:#eaf4f1;color:#175f51;padding:5px 10px;border-radius:20px;font-size:13px;margin:4px 4px 4px 0}.stage{border-left:3px solid #dae4e8;padding:9px 12px;margin:2px 0;font-size:14px}.stage.current{border-color:#087a68;background:#eaf4f1}.stage.done{color:#658071}.instructions{font-size:18px;white-space:pre-line}.bins{display:flex;flex-wrap:wrap;gap:24px;margin:20px 0}.bin{flex:1;min-width:200px;text-align:center}.notice{padding:13px;border-radius:7px;background:#fff4da;white-space:pre-wrap}.error{background:#fff0ef;color:#923d35}.good{background:#e7f5ec;color:#22623c}progress{width:100%;height:14px;accent-color:#087a68}pre{white-space:pre-wrap;word-break:break-word;background:#f5f7f9;padding:14px;max-height:240px;overflow:auto;font-size:12px}#preview{max-width:100%;max-height:480px;border-radius:8px}details{margin:12px 0}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px;border-bottom:1px solid #e2e9ec;text-align:left}.camera-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.camera-summary h2{margin-bottom:6px}.camera-checks{list-style:none;margin:16px 0 0;padding:0}.camera-checks li{padding:12px 0;border-top:1px solid #e2e9ec}.camera-check-title{display:flex;justify-content:space-between;gap:12px;font-size:14px}.camera-check-state{white-space:nowrap;font-weight:600}.camera-check-state.ok{color:#22623c}.camera-check-state.missing{color:#923d35}.camera-checks p{margin:5px 0 0;font-size:14px}.camera-action{color:#704900}.hidden{display:none!important}@media(max-width:800px){main{grid-template-columns:1fr;padding:12px}header{padding:18px}aside{order:0}}
 #configurationHelp,#configurationIssueText,#sessionDetails{overflow-wrap:anywhere}
-.bins{gap:16px;align-items:stretch}.bin{flex:1 1 240px;min-width:240px;padding:16px 10px 8px;border:1px solid #dae4e8;border-radius:10px;background:#fafcfd}.bin.active{border-color:#d3a03d;background:#fffdf7}.bin-title{display:block;font-size:17px;overflow-wrap:anywhere}.bin-caption{margin:0 0 8px;font-size:14px;min-height:38px}.bin-diagram{display:block;width:100%;max-width:340px;margin:0 auto}.wall-label{fill:#536771;font:13px system-ui,sans-serif}.wall-label.active{fill:#875000;font-weight:700}.placement-legend{flex-basis:100%;margin:0;font-size:14px;line-height:1.5;color:#536771}.legend-key{display:inline-flex;align-items:center;gap:6px;margin:4px 16px 4px 0}.legend-swatch{display:inline-block;width:18px;height:12px;background:#f6bc5180;border:1px dashed #ae6c00}.legend-swatch.wall{background:#d39a2f;border:0;height:5px}.legend-swatch.part{position:static;width:18px;height:8px;transform:none;background:#b17026;border:1px solid #68451e}.diagram-empty{fill:#71818a;font:14px system-ui,sans-serif}
+.bins{gap:16px;align-items:stretch}.bin{flex:1 1 240px;min-width:240px;padding:16px 10px 8px;border:1px solid #dae4e8;border-radius:10px;background:#fafcfd}.bin.active{border-color:#d3a03d;background:#fffdf7}.bin-title{display:block;font-size:17px;overflow-wrap:anywhere}.bin-caption{margin:0 0 8px;font-size:14px;min-height:38px}.bin-diagram{display:block;width:100%;max-width:340px;margin:0 auto}.wall-label{fill:#536771;font:13px system-ui,sans-serif}.wall-label.active{fill:#875000;font-weight:700}.placement-legend{flex-basis:100%;margin:0;font-size:14px;line-height:1.5;color:#536771}.legend-key{display:inline-flex;align-items:center;gap:6px;margin:4px 16px 4px 0}.legend-swatch{display:inline-block;width:18px;height:12px;background:#f6bc5180;border:1px solid #ae6c00}.legend-swatch.wall{background:#d39a2f;border:0;height:5px}.legend-swatch.part{position:static;width:18px;height:8px;transform:none;background:#b17026;border:1px solid #68451e}.diagram-empty{fill:#71818a;font:14px system-ui,sans-serif}
 </style></head><body>
 <header><div><h1>Bin Setup</h1><p>UI on local PC · Collect scenes · Fit and validate the bin model</p></div><span id="connection">Connecting…</span></header>
 <main><aside><h2>Collection session</h2><p id="setupSummary" class="muted">Select the scene and its configured bin layout.</p>
@@ -27,7 +27,7 @@
 <p id="cameraCheckedAt" class="muted"></p>
 <p class="muted">Checking the connection does not capture images or move the robot. Collection needs both stereo sensors and the selected scene’s depth service; a running Perception workflow is not required.</p>
 </section>
-<section><h2 id="title">Prepare a new bin setup</h2><p id="sessionDetails" class="muted"></p><div id="exposures"></div><p id="instructions" class="instructions">New setup collects all selected bins together. After empty captures, place exactly one resistor in each bin at the same named location: center, each of the four walls, then the indicated corner. Each location has three arrangements; rotate or reposition each resistor between arrangements. Finally collect three normal and three full arrangements, using your usual production fill amounts without an exact count.</p>
+<section><h2 id="title">Prepare a new bin setup</h2><p id="sessionDetails" class="muted"></p><div id="exposures"></div><p id="instructions" class="instructions">New setup collects all selected bins together. After empty captures, place exactly one resistor in each bin at the same named location: center, toward each of the four sides, then the bottom-left diagonal. Each location has three arrangements; rotate or reposition each resistor between arrangements. Finally collect three normal and three full arrangements, using your usual production fill amounts without an exact count.</p>
 <div id="bins" class="bins"></div><p id="progressText" class="muted"></p><progress id="progress" value="0" max="1"></progress>
 <p id="retry" class="notice hidden">This scene has an interrupted capture. Ready will preserve that attempt and retake the whole scene. Prepare the pictured arrangement again.</p>
 <div class="actions"><button id="ready" class="primary" disabled>Scene ready — capture exposures</button><button id="previewButton" disabled>Preview cameras</button><button id="stop" class="danger" disabled>Stop after current capture</button></div>
@@ -159,7 +159,8 @@ const wallLabels={left:'Left (−X)',right:'Right (+X)',bottom:'Bottom (−Y)',t
 function wallSide(bin){return bin.placement==='wall'?(bin.wall_side||'left'):null;}
 function stageTitle(stage){
   const wall=Object.values(stage.bins||{}).find(bin=>bin.placement==='wall');
-  return wall?stage.title.replace(/, wall(?=\s|$)/,', '+wallSide(wall)+' wall'):stage.title;
+  const title=wall?stage.title.replace(/, wall(?=\s|$)/,', '+wallSide(wall)+' wall'):stage.title;
+  return title.replace(/, corner(?=\s|$)/,', bottom-left diagonal');
 }
 function svgElement(tag,attributes={},content){
   const element=document.createElementNS('http://www.w3.org/2000/svg',tag);
@@ -167,30 +168,40 @@ function svgElement(tag,attributes={},content){
   if(content!==undefined)element.textContent=content;
   return element;
 }
+function bowlArc(start,end,radius=94){
+  const point=angle=>[170+radius*Math.cos(angle*Math.PI/180),152+radius*Math.sin(angle*Math.PI/180)];
+  const [x0,y0]=point(start),[x1,y1]=point(end);
+  return {start:[x0,y0],arc:'A '+radius+' '+radius+' 0 0 1 '+x1+' '+y1};
+}
 function diagrams(stage){
   $('bins').replaceChildren();if(!stage)return;
+  const sectors={left:[135,225],right:[-45,45],bottom:[45,135],top:[225,315],corner:[90,180]};
+  const examples={left:[120,152],right:[220,152],bottom:[170,202],top:[170,102],corner:[135,187],center:[170,152]};
   for(const [name,bin] of Object.entries(stage.bins)){
     const side=wallSide(bin),active=bin.part_count===1;
-    const placement=side?(wallLabels[side]||side)+' wall':bin.placement==='corner'?'Bottom-left (−X, −Y) corner':'Center';
+    const placement=side?(wallLabels[side]||side)+' side':bin.placement==='corner'?'Bottom-left (−X, −Y) diagonal':'Near center';
     const caption=active?'One resistor · '+placement:bin.label==='empty'?'Empty · remove every part':bin.placement==='full'?'Your normal full load':'Your normal working load';
     const panel=document.createElement('div');panel.className='bin'+(active?' active':'');
     const title=document.createElement('strong');title.className='bin-title';title.textContent=name;
     const label=document.createElement('p');label.className='bin-caption muted';label.textContent=caption;panel.append(title,label);
-    const diagram=svgElement('svg',{class:'bin-diagram',viewBox:'0 0 340 310',role:'img','aria-label':name+': '+caption+'. Schematic top view in bin-local coordinates.'});
+    const diagram=svgElement('svg',{class:'bin-diagram',viewBox:'0 0 340 310',role:'img','aria-label':name+': '+caption+'. Schematic curved bowl with approximate directional placement.'});
     diagram.append(svgElement('title',{},name+': '+caption));
-    diagram.append(svgElement('rect',{x:62,y:50,width:216,height:204,rx:20,fill:'#edf2f5',stroke:'#bdcbd4','stroke-width':20}));
-    const wallLines={left:[62,77,62,227],right:[278,77,278,227],bottom:[88,254,252,254],top:[88,50,252,50]};
-    for(const highlighted of side?[side]:bin.placement==='corner'?['left','bottom']:[]){
-      const line=wallLines[highlighted];if(line)diagram.append(svgElement('line',{x1:line[0],y1:line[1],x2:line[2],y2:line[3],stroke:'#d39a2f','stroke-width':9,'stroke-linecap':'round',class:'active-wall','data-wall':highlighted}));
+    diagram.append(svgElement('circle',{cx:170,cy:152,r:104,fill:'#edf2f5',stroke:'#bdcbd4','stroke-width':20}));
+    for(const radius of [70,44])diagram.append(svgElement('circle',{cx:170,cy:152,r:radius,fill:'none',stroke:'#dce5eb','stroke-width':1}));
+    const direction=side||(bin.placement==='corner'?'corner':null);
+    if(active&&direction&&sectors[direction]){
+      const sector=bowlArc(...sectors[direction]);
+      diagram.append(svgElement('path',{d:'M 170 152 L '+sector.start.join(' ')+' '+sector.arc+' Z',fill:'#f6bc5180',class:'placement-sector','data-direction':direction}));
+      const rim=bowlArc(...sectors[direction],104);
+      diagram.append(svgElement('path',{d:'M '+rim.start.join(' ')+' '+rim.arc,fill:'none',stroke:'#d39a2f','stroke-width':8,'stroke-linecap':'round',class:'active-wall','data-wall':direction}));
+    }else if(active){
+      diagram.append(svgElement('circle',{cx:170,cy:152,r:28,fill:'#f6bc5180',class:'placement-sector','data-direction':'center'}));
     }
     for(const [wall,x,y,rotation] of [['top',170,24,0],['bottom',170,287,0],['left',25,152,-90],['right',315,152,90]]){
       diagram.append(svgElement('text',{x,y,'text-anchor':'middle',class:'wall-label'+(wall===side?' active':''),transform:rotation?'rotate('+rotation+' '+x+' '+y+')':''},wallLabels[wall]));
     }
-    if(bin.target_region_fraction){
-      const [x0,y0,x1,y1]=bin.target_region_fraction;
-      // Fractions refer to the interior floor, excluding the rim. SVG Y points down.
-      const x=72+196*x0,y=60+184*(1-y1),width=196*(x1-x0),height=184*(y1-y0),cx=x+width/2,cy=y+height/2;
-      diagram.append(svgElement('rect',{x,y,width,height,rx:3,fill:'#f6bc5180',stroke:'#ae6c00','stroke-width':2,'stroke-dasharray':'5 3',class:'target-region'}));
+    if(active){
+      const [cx,cy]=examples[direction]||examples.center;
       const part=svgElement('g',{transform:'translate('+cx+' '+cy+')',class:'example-resistor'});
       part.append(svgElement('line',{x1:-14,y1:0,x2:14,y2:0,stroke:'#68451e','stroke-width':2}));
       part.append(svgElement('rect',{x:-8,y:-4,width:16,height:8,rx:2,fill:'#b17026',stroke:'#68451e','stroke-width':1.5}));
@@ -199,18 +210,26 @@ function diagrams(stage){
     }else if(bin.label==='loaded'){
       const firstRow=bin.placement==='normal'?2:0;
       for(let row=firstRow;row<5;row++)for(let column=0;column<5;column++){
-        diagram.append(svgElement('rect',{x:85+column*34,y:76+row*33,width:22,height:10,rx:3,fill:'#b88a55',stroke:'#8d663f',transform:'rotate('+((row+column)%2?24:-18)+' '+(96+column*34)+' '+(81+row*33)+')',opacity:.8}));
+        const cx=106+column*32,cy=88+row*32;
+        if(Math.hypot(cx-170,cy-152)>80)continue;
+        diagram.append(svgElement('rect',{x:cx-11,y:cy-5,width:22,height:10,rx:3,fill:'#b88a55',stroke:'#8d663f',transform:'rotate('+((row+column)%2?24:-18)+' '+cx+' '+cy+')',opacity:.8}));
       }
     }else diagram.append(svgElement('text',{x:170,y:158,'text-anchor':'middle',class:'diagram-empty'},'Keep empty'));
     panel.append(diagram);$('bins').append(panel);
   }
   const legend=document.createElement('div');legend.className='placement-legend';
-  for(const [kind,label] of [['region','Place on highlighted floor'],['wall','Selected wall'],['part','Example resistor position']]){
+  for(const [kind,label] of [['region','Approximate placement direction'],['wall','Selected side'],['part','Example resistor position']]){
     const item=document.createElement('span');item.className='legend-key';const swatch=document.createElement('span');swatch.className='legend-swatch '+kind;item.append(swatch,document.createTextNode(label));legend.append(item);
   }
-  const note=document.createElement('p');note.style.margin='5px 0 0';note.textContent='Schematic top view in bin-local coordinates: +X right, +Y up. Place the resistor inside the highlighted floor area, not on the rim or side wall. The icon is an example, not a detected position. Camera images may have a different orientation.';legend.append(note);$('bins').append(legend);
+  const note=document.createElement('p');note.style.margin='5px 0 0';note.textContent='Schematic top view: +X right, +Y up in bin-local coordinates. Place the resistor naturally on the lower bowl toward the highlighted direction; keep it off the rim and steep wall. The curved bowl has no physical corner: older “corner” stages mean the bottom-left diagonal. The shading and icon are guidance, not measured boundaries or a detected position. Camera images may have a different orientation.';legend.append(note);$('bins').append(legend);
 }
-function showAcceptance(report){acceptance=report;const panel=$('acceptance');panel.replaceChildren();const result=document.createElement('p');result.className='notice '+(report.status==='passed'?'good':'error');const failed=(report.results||[]).filter(x=>!x.passed);result.textContent=(report.status==='passed'?'Validation passed':'Validation failed')+' · '+(report.model_name||'')+' · '+report.capture_count+' captures'+(report.synthetic?' · synthetic development data':'')+' · '+failed.length+' failed bin checks';panel.append(result);if(report.missing_evidence?.length){const p=document.createElement('p');p.textContent='Missing evidence: '+report.missing_evidence.join(', ');panel.append(p);}if(failed.length){const table=document.createElement('table');for(const item of failed){const row=table.insertRow();for(const value of [item.capture_id,item.bin_id,item.exposure_ms+' ms',(item.reasons||[]).join('; ')])row.insertCell().textContent=value;}panel.append(table);}const p=document.createElement('p');p.className='muted';p.textContent='Tested exposure settings: '+(report.exposures_ms||[]).join(', ')+' ms. Intermediate settings and other lighting conditions need their own evidence.';panel.append(p);}
+function showAcceptance(report){acceptance=report;const panel=$('acceptance');panel.replaceChildren();
+if(report.placement_evidence==='operator_confirmed_directional'){
+  const evidence=document.createElement('p');evidence.className='notice';
+  evidence.textContent='Placement evidence: the operator confirmed one resistor in each instructed bin. Validation checks approximate center or broad direction inside the measured bowl. Exact resistor footprints were not annotated; this does not establish precise part localization or grasp accuracy.';
+  panel.append(evidence);
+}
+const result=document.createElement('p');result.className='notice '+(report.status==='passed'?'good':'error');const failed=(report.results||[]).filter(x=>!x.passed);result.textContent=(report.status==='passed'?'Validation passed':'Validation failed')+' · '+(report.model_name||'')+' · '+report.capture_count+' captures'+(report.synthetic?' · synthetic development data':'')+' · '+failed.length+' failed bin checks';panel.append(result);if(report.missing_evidence?.length){const p=document.createElement('p');p.textContent='Missing evidence: '+report.missing_evidence.join(', ');panel.append(p);}if(failed.length){const table=document.createElement('table');for(const item of failed){const row=table.insertRow();for(const value of [item.capture_id,item.bin_id,item.exposure_ms+' ms',(item.reasons||[]).join('; ')])row.insertCell().textContent=value;}panel.append(table);}const p=document.createElement('p');p.className='muted';p.textContent='Tested exposure settings: '+(report.exposures_ms||[]).join(', ')+' ms. Intermediate settings and other lighting conditions need their own evidence.';panel.append(p);}
 function render(){const s=state;renderConfiguration();const sessionChanged=$('title').dataset.session!==s.session_path;if(sessionChanged){acceptance=null;lastResult=null;$('acceptance').replaceChildren();$('previewFigure').classList.add('hidden');$('title').dataset.session=s.session_path||'';}text('connection',s.busy?'Working…':'Local app ready');renderCameraConnection();text('storage',s.storage_free_gb+' GB available');const selected=$('sessions').value;const paths=s.catalog.sessions;const signature=JSON.stringify(paths);if($('sessions').dataset.signature!==signature){$('sessions').replaceChildren(new Option('Choose a session',''),...paths.map(path=>new Option(path.split('/').pop(),path)));$('sessions').dataset.signature=signature;$('sessions').value=paths.includes(selected)?selected:s.session_path||'';}text('title',s.session?s.session.session_id:'Prepare a new bin setup');text('sessionDetails',s.session?'Scene '+s.session.scene_id+' · '+s.session.frame_id+' frame · '+(s.session.bin_ids||Object.keys(s.session.stages?.[0]?.bins||{})).join(', '):'');$('stages').replaceChildren();for(const stage of s.stages){const div=document.createElement('div');div.className='stage '+(stage.id===s.current_stage?.id?'current':stage.finished?'done':'');div.textContent=stageTitle(stage)+' · '+stage.completed+'/'+stage.total;$('stages').append(div);}if(s.session){text('instructions',s.current_stage?s.current_stage.instructions:'All collection scenes are complete. Build and validate the model below.');diagrams(s.current_stage);$('exposures').replaceChildren(...[...new Set(s.session.captures.map(c=>c.exposure_ms))].map(e=>{const span=document.createElement('span');span.className='pill';span.textContent=e+' ms';return span;}));}text('progressText',s.total?s.completed+' / '+s.total+' captures saved'+(s.busy?' · leave the current scene unchanged':''):'');$('progress').max=s.total||1;$('progress').value=s.completed;$('retry').classList.toggle('hidden',!s.current_stage?.completed||s.busy);text('error',s.error||'');$('error').classList.toggle('hidden',!s.error);text('log',s.logs.join('\n')||'Waiting for a session.');const result=JSON.stringify(s.result);if(s.result&&result!==lastResult){lastResult=result;if(s.result.preview_png){$('preview').src='data:image/png;base64,'+s.result.preview_png;text('previewCaption',s.result.caption);$('previewFigure').classList.remove('hidden');}if(s.result.acceptance)showAcceptance(s.result.acceptance);if(s.result.runtime_verified){text('message','Model loaded and verified: '+s.result.model_path);$('message').classList.remove('hidden');}}renderButtons();}
 async function refresh(){
   try{

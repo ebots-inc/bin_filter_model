@@ -68,6 +68,30 @@ def target_bounds(stage_bin, bin_config):
         lo, hi = [x[xx.min()],y[yy.min()]], [x[xx.max()+1],y[yy.max()+1]]
     else:
         lo, hi = geometry['xy_bounds_mm']
+    # The collection diagram is a qualitative guide, not a measured resistor
+    # annotation. A continuously curved bowl has no unique floor rectangle:
+    # reliable background cells include its sloping walls. Named guided stages
+    # therefore check direction about the configured bin seed, never turn the
+    # schematic wall/corner fractions into a precise box on those walls.
+    placement_kind = stage_bin.get('placement')
+    if ('geometry' in bin_config and type(stage_bin.get('part_count')) is int and stage_bin['part_count'] == 1
+            and placement_kind in ('center', 'wall', 'corner')):
+        center = np.asarray(geometry.get('seed_xy_mm', (np.asarray(lo) + hi) / 2), dtype=float)
+        if center.shape != (2,) or not np.isfinite(center).all() or not np.all(
+                (center > np.asarray(lo)) & (center < np.asarray(hi))):
+            raise data.DatasetError('Directional placement requires a bin seed inside the measured footprint')
+        side = stage_bin.get('wall_side', 'left') if placement_kind == 'wall' else None
+        if side is not None and side not in ('left', 'right', 'bottom', 'top'):
+            raise data.DatasetError(f'Unknown resistor wall side: {side!r}')
+        return {'frame_id': 'bin', 'mode': 'directional', 'placement': placement_kind,
+                'wall_side': side, 'xy_bounds_mm': [list(lo), list(hi)],
+                'center_xy_mm': center.tolist(),
+                'center_fraction': list(region) if placement_kind == 'center' else None,
+                'robot_from_bin': data.validate_transform(bin_config['robot_from_bin']).tolist(),
+                'reference': 'measured_background_footprint_and_configured_bin_seed',
+                'evidence': 'operator_confirmed_directional',
+                'exact_part_location_verified': False,
+                'wall_distance_verified': False}
     bounds = [[lo[i] + (hi[i] - lo[i]) * region[i] for i in range(2)],
               [lo[i] + (hi[i] - lo[i]) * region[i + 2] for i in range(2)]]
     if 'geometry' in bin_config:
@@ -82,7 +106,46 @@ def target_bounds(stage_bin, bin_config):
     return bounds
 
 
-def assess_result(result, label, region=None):
+def _reliable_xy(points, geometry):
+    """Require measured support, including curved/nonrectangular outlines and holes."""
+    x, y = np.asarray(geometry['x_centers_mm']), np.asarray(geometry['y_centers_mm'])
+    tolerance = np.asarray(geometry['tolerance_mm'], dtype=float)
+    ix = np.searchsorted(x, points[:, 0], side='right') - 1
+    iy = np.searchsorted(y, points[:, 1], side='right') - 1
+    valid = (ix >= 0) & (iy >= 0) & (ix < tolerance.shape[1]) & (iy < tolerance.shape[0])
+    indices = np.flatnonzero(valid)
+    valid[indices] &= np.isfinite(tolerance[iy[indices], ix[indices]])
+    return valid
+
+
+def _directional_matches(points, region):
+    lo, hi = np.asarray(region['xy_bounds_mm'], dtype=float)
+    center = np.asarray(region['center_xy_mm'], dtype=float)
+    # Normalize each axis for elongated bins. This checks broad cardinal areas;
+    # the historical 'corner' label means the bottom-left diagonal area of a
+    # curved bowl, not a nonexistent rectangular corner or a wall-distance test.
+    offset = (points[:, :2] - center) / np.maximum(hi - center, center - lo)
+    x, y = offset.T
+    # Rigid-transform roundoff must not assign the exact origin a direction.
+    epsilon = 1e-9
+    kind = region['placement']
+    if kind == 'corner':
+        return (x < -epsilon) & (y < -epsilon)
+    if kind == 'center':
+        fraction = np.asarray(region['center_fraction'], dtype=float)
+        lower, upper = lo + (hi - lo) * fraction[:2], lo + (hi - lo) * fraction[2:]
+        return np.all((points[:, :2] >= lower) & (points[:, :2] <= upper), axis=1)
+    side = region['wall_side']
+    if side == 'left':
+        return (x < -epsilon) & (np.abs(x) >= np.abs(y))
+    if side == 'right':
+        return (x > epsilon) & (np.abs(x) >= np.abs(y))
+    if side == 'bottom':
+        return (y < -epsilon) & (np.abs(y) >= np.abs(x))
+    return (y > epsilon) & (np.abs(y) >= np.abs(x))
+
+
+def assess_result(result, label, region=None, *, bin_config=None):
     reasons = []
     registration = result.get('registration', result.get('bin_registration', result.get('icp', {})))
     if (not isinstance(registration,dict) or registration.get('attempted') is not True
@@ -108,7 +171,16 @@ def assess_result(result, label, region=None):
                 bounds = region['xy_bounds_mm']
             else:
                 points, bounds = candidates, region
-            if not any(all(bounds[0][i] <= point[i] <= bounds[1][i] for i in range(2)) for point in points):
+            points = np.asarray(points)
+            inside = np.all((points[:, :2] >= bounds[0]) & (points[:, :2] <= bounds[1]), axis=1)
+            if isinstance(region, dict) and region.get('mode') == 'directional':
+                if bin_config is None or 'geometry' not in bin_config:
+                    raise data.DatasetError('Directional placement validation requires measured bin geometry')
+                inside &= _reliable_xy(points, bin_config['geometry'])
+                inside &= _directional_matches(points, region)
+                if not inside.any():
+                    reasons.append('No target was detected in the operator-confirmed directional area with measured bin support')
+            elif not inside.any():
                 reasons.append('No target was detected inside the prescribed resistor placement region')
     else:
         reasons.append('Unknown expected bin contents')
@@ -223,7 +295,7 @@ def validate_production(dataset, model_path, pipeline_config, output, executable
             result['model_path_relative_to'] = 'result_file'
             data.write_json(report_path, result)
             region = target_bounds(stage.get('bins', {}).get(bin_id, {}), model['bins'][bin_id])
-            reasons = assess_result(result, label, region)
+            reasons = assess_result(result, label, region, bin_config=model['bins'][bin_id])
             if execution_error:
                 reasons.insert(0,execution_error + '; inspect replay.log')
             results.append({'capture_id': entry['id'], 'stage_id': stage_id, 'bin_id': bin_id,
@@ -292,5 +364,12 @@ def validate_production(dataset, model_path, pipeline_config, output, executable
               'missing_evidence': missing, 'exposures_ms': sorted(exposures),
               'minimum_part': 'operator-placed resistor', 'filled_amount': 'operator-described normal/full',
               'exposure_evidence': 'requested_not_sensor_verified'}
+    if any(isinstance(item['target_region'], dict) and item['target_region'].get('mode') == 'directional'
+           for item in results):
+        report['placement_evidence'] = 'operator_confirmed_directional'
+        report['placement_interpretation'] = (
+            'Checks measured bin support and broad directions for operator-confirmed single-resistor scenes. '
+            'The schematic is not a measured part annotation; exact resistor footprint and distance to a wall '
+            'are not independently verified. Corner stages describe a bottom-left diagonal area for curved bins.')
     data.write_json(output / 'acceptance.json', report)
     return report

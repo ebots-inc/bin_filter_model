@@ -59,21 +59,31 @@ The default guide has **26 stages / 170 captures**, regardless of the number of
 selected bins: empty training (35), fresh empty validation (15), resistor
 locations (6 × 15), normal fill (15), and full fill (15). All selected bins are
 captured together. For resistor stages, place **exactly one resistor in each
-selected bin** at the same named location: center, each of four walls, then the
-indicated corner. Each location has **three arrangements of five exposures**.
+selected bin** at the same named location: near center, toward each of four
+sides, then the bottom-left diagonal. Each location has **three arrangements of five exposures**.
 Reposition or rotate each bin's resistor within its indicated region between
 arrangements, keeping exactly one resistor in each bin.
 For normal/full arrangements, rearrange the parts while
 keeping roughly the same fill amount. Use your usual production amounts;
 no exact part count is needed. Empty stages keep their automatic repetitions.
 Only empty training captures fit the model. Empty validation evaluates each
-empty bin; resistor validation checks retention and target location separately
-for every bin in the shared capture.
-The diagram labels all four walls in bin-local coordinates: left (−X), right
-(+X), bottom (−Y), and top (+Y). Gold marks the selected wall; dashed amber
-marks the measured interior floor region where the resistor belongs, inside
-the rim. The resistor icon is an example position. Camera image orientation may
-differ. Corner stages use the indicated bottom-left (−X, −Y) corner only.
+empty bin; resistor validation checks that each operator-declared loaded bin
+produces a target in the approximate center or instructed broad direction,
+inside the measured bowl. It does not verify an exact resistor footprint.
+The diagram labels left (−X), right (+X), bottom (−Y), and top (+Y) in bin-local
+coordinates. Gold marks the selected side; amber shows approximate directional
+guidance. Place the resistor naturally on the lower bowl, off the rim and steep
+wall. The icon is an example, not a live detection or a measured target boundary.
+Camera image orientation may differ. Historical `corner` stages mean the
+bottom-left (−X, −Y) diagonal; their saved IDs and captures remain unchanged.
+
+The supplied wok-style CAD describes an approximately **190 × 190 × 80 mm**
+curved bowl with a top rim and no physical corner. It informs this schematic;
+the model still learns the observed background from empty training captures.
+CAD coordinates do not determine camera calibration, bin placement or robot
+pose. The report labels these checks `operator_confirmed_directional`:
+broad direction is checked, while exact resistor location and grasp accuracy
+require independent annotations and validation.
 
 Existing saved sessions retain their recorded plan. An older loaded stage with
 15 captures still runs three sweeps after one Ready click; new sessions use a

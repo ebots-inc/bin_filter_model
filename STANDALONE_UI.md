@@ -163,8 +163,8 @@ are retained for reproducibility, not additional setup files to maintain.
    arrangement and waits for another Ready click.
 3. Empty training and fresh empty validation come first. Then place **exactly
    one resistor in each selected bin**, collecting all bins together at the same
-   named location: center, beside **each of the four walls**, then the indicated
-   bottom-left corner.
+   named location: near center, toward **each of the four sides**, then the
+   bottom-left diagonal.
    Each location has **three arrangements**: after each sweep, rotate or
    reposition every bin's resistor within its indicated region before clicking
    Ready again. Keep exactly one resistor in each bin. Finally collect three normal-fill
@@ -189,18 +189,37 @@ arrangement shows **0/5** in the sidebar and needs a separate Ready click.
 The three arrangements still total 15 captures per resistor location or fill
 condition. Only empty training captures fit the model. Fresh empty validation
 checks each selected bin while all are empty; loaded validation evaluates every
-bin's resistor and expected location separately within the shared captures.
-Validation does not establish grasp success, unmeasured exposure settings or
-arbitrary ambient lighting.
+bin's expected contents separately within the shared captures. For resistor
+stages, production validation requires a target near the center or in the
+instructed broad direction, inside the reliable measured bowl footprint.
+Validation does not establish an exact resistor footprint, precise part
+localization, grasp success, unmeasured exposure settings or arbitrary ambient
+lighting.
 
 These counts apply to newly prepared sessions with the default three loaded
 arrangements, four walls, and simultaneous resistor placement in all selected
-bins. The diagram labels **Left (−X), Right (+X),
-Bottom (−Y), and Top (+Y)** in the bin's local coordinate system. The selected
-wall is gold and the dashed amber region marks the interior floor placement
-area. Keep the resistor off the rim and side wall. The resistor icon is an example
-position, not a live detection; camera images may use a different orientation.
-The corner stages still use only the indicated bottom-left (−X, −Y) corner.
+bins. The diagram labels **Left (−X), Right (+X), Bottom (−Y), and Top (+Y)**
+in the bin's local coordinate system. Gold marks the selected side and amber
+shows approximate directional guidance on a rounded bowl. Place the resistor
+naturally on the lower bowl in that direction, off the rim and steep wall. There
+is no required distance from the wall. The icon is an example position; neither
+it nor the shading is a measured target boundary. Camera images may use a
+different orientation. Historical `corner` stages mean the bottom-left
+(−X, −Y) diagonal, since this curved bowl has no physical corner.
+
+The supplied wok-style CAD is approximately **190 × 190 × 80 mm**, with a
+continuously curved interior and top rim. It explains the shape shown by the
+schematic. The background model remains fitted to empty training captures;
+CAD does not supply the camera calibration, placed-bin transform or robot pose.
+The saved stage and capture IDs remain unchanged.
+
+The acceptance report records `placement_evidence: operator_confirmed_directional`.
+The operator's Ready confirmation establishes the instructed contents; the
+replay checks approximate center or broad direction inside the measured bowl.
+Left/right/top/bottom use the named side and dominant axis from the bin's
+configured interior seed; the diagonal uses negative X and negative Y. These
+checks do not claim that the target coincides with an independently annotated
+resistor footprint. That stronger localization claim needs separate evidence.
 
 Existing saved sessions retain their recorded plan. Older sequential sessions
 still ask for one loaded bin and the other bins empty; follow their current
