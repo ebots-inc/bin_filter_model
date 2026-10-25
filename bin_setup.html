@@ -1,23 +1,25 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bin Setup</title><style>
-:root{font:16px system-ui,sans-serif;color:#172c38;background:#f2f5f7}*{box-sizing:border-box}body{margin:0}header{padding:22px 32px;background:#123347;color:white;display:flex;justify-content:space-between;align-items:center}h1{font-size:25px;margin:0}header p{margin:5px 0 0;color:#c4d9e5}main{max-width:1320px;margin:auto;padding:24px;display:grid;grid-template-columns:300px 1fr;gap:20px}section,aside{background:white;border:1px solid #dbe4e9;border-radius:12px;padding:22px}h2{font-size:20px;margin:0 0 16px}h3{font-size:17px}p{line-height:1.55}.muted{color:#5b6e79;font-size:14px}label{display:block;font-size:14px;margin:16px 0 6px}input,select,button{font:inherit;border-radius:7px;border:1px solid #b9cbd5;padding:10px;max-width:100%}input,select{width:100%;background:white}button{cursor:pointer;background:#eaf0f4;color:#16374a;margin:5px 5px 5px 0}button.primary{background:#087a68;color:white;border-color:#087a68}button.danger{color:#9c2828;background:#fff3f3;border-color:#e8b6b6}button:disabled{cursor:default;opacity:.45}.actions{display:flex;flex-wrap:wrap;align-items:center;margin:12px 0}.workspace{display:grid;gap:20px}.pill{display:inline-block;background:#eaf4f1;color:#175f51;padding:5px 10px;border-radius:20px;font-size:13px;margin:4px 4px 4px 0}.stage{border-left:3px solid #dae4e8;padding:9px 12px;margin:2px 0;font-size:14px}.stage.current{border-color:#087a68;background:#eaf4f1}.stage.done{color:#658071}.instructions{font-size:18px;white-space:pre-line}.bins{display:flex;flex-wrap:wrap;gap:24px;margin:20px 0}.bin{flex:1;min-width:200px;text-align:center}.notice{padding:13px;border-radius:7px;background:#fff4da;white-space:pre-wrap}.error{background:#fff0ef;color:#923d35}.good{background:#e7f5ec;color:#22623c}progress{width:100%;height:14px;accent-color:#087a68}pre{white-space:pre-wrap;word-break:break-word;background:#f5f7f9;padding:14px;max-height:240px;overflow:auto;font-size:12px}#preview{max-width:100%;max-height:480px;border-radius:8px}details{margin:12px 0}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px;border-bottom:1px solid #e2e9ec;text-align:left}.camera-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.camera-summary h2{margin-bottom:6px}.camera-checks{list-style:none;margin:16px 0 0;padding:0}.camera-checks li{padding:12px 0;border-top:1px solid #e2e9ec}.camera-check-title{display:flex;justify-content:space-between;gap:12px;font-size:14px}.camera-check-state{white-space:nowrap;font-weight:600}.camera-check-state.ok{color:#22623c}.camera-check-state.missing{color:#923d35}.camera-checks p{margin:5px 0 0;font-size:14px}.camera-action{color:#704900}.hidden{display:none!important}@media(max-width:800px){main{grid-template-columns:1fr;padding:12px}header{padding:18px}aside{order:0}}
+:root{font:16px system-ui,sans-serif;color:#172c38;background:#f2f5f7}*{box-sizing:border-box}body{margin:0}header{padding:22px 32px;background:#123347;color:white;display:flex;justify-content:space-between;align-items:center}h1{font-size:25px;margin:0}header p{margin:5px 0 0;color:#c4d9e5}main{max-width:1320px;margin:auto;padding:24px;display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start}section,aside{background:white;border:1px solid #dbe4e9;border-radius:12px;padding:22px}h2{font-size:20px;margin:0 0 16px}h3{font-size:17px}p{line-height:1.55}.muted{color:#5b6e79;font-size:14px}label{display:block;font-size:14px;margin:16px 0 6px}input,select,button{font:inherit;border-radius:7px;border:1px solid #b9cbd5;padding:10px;max-width:100%}input,select{width:100%;background:white}button{cursor:pointer;background:#eaf0f4;color:#16374a;margin:5px 5px 5px 0}button.primary{background:#087a68;color:white;border-color:#087a68}button.danger{color:#9c2828;background:#fff3f3;border-color:#e8b6b6}button:disabled{cursor:default;opacity:.45}.actions{display:flex;flex-wrap:wrap;align-items:center;margin:12px 0}.workspace{display:grid;gap:20px;align-content:start}.pill{display:inline-block;background:#eaf4f1;color:#175f51;padding:5px 10px;border-radius:20px;font-size:13px;margin:4px 4px 4px 0}.stage{border-left:3px solid #dae4e8;padding:9px 12px;margin:2px 0;font-size:14px}.stage.current{border-color:#087a68;background:#eaf4f1}.stage.done{color:#658071}.instructions{font-size:18px;white-space:pre-line}.bins{display:flex;flex-wrap:wrap;gap:24px;margin:20px 0}.bin{flex:1;min-width:200px;text-align:center}.notice{padding:13px;border-radius:7px;background:#fff4da;white-space:pre-wrap}.error{background:#fff0ef;color:#923d35}.good{background:#e7f5ec;color:#22623c}progress{width:100%;height:14px;accent-color:#087a68}pre{white-space:pre-wrap;word-break:break-word;background:#f5f7f9;padding:14px;max-height:240px;overflow:auto;font-size:12px}#preview{max-width:100%;max-height:480px;border-radius:8px}details{margin:12px 0}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px;border-bottom:1px solid #e2e9ec;text-align:left}.camera-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.camera-summary h2{margin-bottom:6px}.camera-checks{list-style:none;margin:16px 0 0;padding:0}.camera-checks li{padding:12px 0;border-top:1px solid #e2e9ec}.camera-check-title{display:flex;justify-content:space-between;gap:12px;font-size:14px}.camera-check-state{white-space:nowrap;font-weight:600}.camera-check-state.ok{color:#22623c}.camera-check-state.missing{color:#923d35}.camera-checks p{margin:5px 0 0;font-size:14px}.camera-action{color:#704900}.hidden{display:none!important}@media(max-width:800px){main{grid-template-columns:1fr;padding:12px}header{padding:18px}aside{order:0}}
 #configurationHelp,#configurationIssueText,#sessionDetails{overflow-wrap:anywhere}
+.layout-canvas{display:block;width:100%;max-height:640px;background:#edf2f5;touch-action:none;cursor:crosshair;border:1px solid #b9cbd5;border-radius:8px}.layout-row{display:flex;gap:8px;align-items:center;padding:8px;border:1px solid #dbe4e9;border-radius:8px;margin:8px 0}.layout-row.selected{border-color:#087a68;background:#eaf4f1}.layout-row input{flex:1;min-width:100px}.layout-row button{margin:0;white-space:nowrap}.layout-row .muted{min-width:80px}.layout-steps{padding-left:22px}.layout-steps li{margin:8px 0}.layout-review-image{width:100%;height:auto;border-radius:8px}.layout-status{font-weight:600;min-height:24px}.layout-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:14px}.layout-legend span::before{content:'';display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:middle;background:#1aa9be}.layout-legend span.rim::before{background:#e8a335}
 .bins{gap:16px;align-items:stretch}.bin{flex:1 1 240px;min-width:240px;padding:16px 10px 8px;border:1px solid #dae4e8;border-radius:10px;background:#fafcfd}.bin.active{border-color:#d3a03d;background:#fffdf7}.bin-title{display:block;font-size:17px;overflow-wrap:anywhere}.bin-caption{margin:0 0 8px;font-size:14px;min-height:38px}.bin-diagram{display:block;width:100%;max-width:340px;margin:0 auto}.wall-label{fill:#536771;font:13px system-ui,sans-serif}.wall-label.active{fill:#875000;font-weight:700}.placement-legend{flex-basis:100%;margin:0;font-size:14px;line-height:1.5;color:#536771}.legend-key{display:inline-flex;align-items:center;gap:6px;margin:4px 16px 4px 0}.legend-swatch{display:inline-block;width:18px;height:12px;background:#f6bc5180;border:1px solid #ae6c00}.legend-swatch.wall{background:#d39a2f;border:0;height:5px}.legend-swatch.part{position:static;width:18px;height:8px;transform:none;background:#b17026;border:1px solid #68451e}.diagram-empty{fill:#71818a;font:14px system-ui,sans-serif}
 </style></head><body>
-<header><div><h1>Bin Setup</h1><p>UI on local PC · Collect scenes · Fit and validate the bin model</p></div><span id="connection">Connecting…</span></header>
-<main><aside><h2>Collection session</h2><p id="setupSummary" class="muted">Select the scene and its configured bin layout.</p>
+<header><div><h1>Bin Setup</h1><p>1. Choose bins → 2. Capture scenes → 3. Review CAD (optional) → 4. Build and validate</p><a href="/guide" target="_blank" rel="noopener" style="color:#c4d9e5">Open the step-by-step operator guide</a></div><span id="connection">Connecting…</span></header>
+<main><aside><h2>1. Collection session</h2><p id="setupSummary" class="muted">Select the scene and its configured bin layout.</p>
 <label for="sceneInput">Scene</label><select id="sceneInput"></select>
 <label for="cameraCalibration">Camera calibration</label><select id="cameraCalibration"></select>
 <label for="robotCalibration">Reference frame</label><select id="robotCalibration"></select>
 <label for="layoutInput">Bin layout</label><select id="layoutInput"></select>
+<button id="layoutOpen" type="button">Create bin layout</button><p class="muted">No layout yet, or bins moved? Click Create bin layout and draw around each empty bin. No coordinate measurements needed.</p>
 <label>Bins to collect</label><div id="binSelection"></div>
 <p id="configurationHelp" class="muted"></p>
 <details id="configurationIssues" class="hidden"><summary>Configuration files to review</summary><p id="configurationIssueText" class="muted"></p></details>
 <label for="name">Session name (optional)</label><input id="name" placeholder="resistor-baseline" maxlength="80">
 <label for="exposureInput">Capture exposures (ms)</label><input id="exposureInput" value="4, 8, 12, 16, 20"><p class="muted">Each value applies to spotlight and structured light on both cameras.</p><div class="actions"><button id="prepare" class="primary">New setup</button><button id="check">New empty check</button></div>
 <label for="sessions">Saved sessions</label><select id="sessions"><option value="">Choose a session</option></select><button id="open">Open session</button>
-<p id="storage" class="muted"></p><hr><h3>Scene guide</h3><div id="stages" class="muted">Prepare a session to begin.</div>
+<p id="storage" class="muted"></p><hr><details id="sceneGuide" open><summary>Scene guide</summary><div id="stages" class="muted">Prepare a session to begin.</div></details>
 <details><summary>Station requirements</summary><p class="muted">Keep production stopped while collecting. Camera and Eyes depth services must be running. Park the arm outside the camera view. This application does not move the robot.</p></details>
 </aside><div class="workspace">
 <section aria-labelledby="cameraHeading">
@@ -27,7 +29,28 @@
 <p id="cameraCheckedAt" class="muted"></p>
 <p class="muted">Checking the connection does not capture images or move the robot. Collection needs both stereo sensors and the selected scene’s depth service; a running Perception workflow is not required.</p>
 </section>
-<section><h2 id="title">Prepare a new bin setup</h2><p id="sessionDetails" class="muted"></p><div id="exposures"></div><p id="instructions" class="instructions">New setup collects all selected bins together. After empty captures, place exactly one resistor in each bin at the same named location: center, toward each of the four sides, then the bottom-left diagonal. Each location has three arrangements; rotate or reposition each resistor between arrangements. Finally collect three normal and three full arrangements, using your usual production fill amounts without an exact count.</p>
+<section id="layoutEditor" class="hidden" aria-labelledby="layoutHeading">
+<h2 id="layoutHeading">Create a bin layout from the camera view</h2>
+<p id="layoutContext" class="muted"></p>
+<ol class="layout-steps"><li>Empty the bins and leave them in their normal mounted positions. Keep the arm out of view.</li><li>Check the camera connection, then capture the empty scene.</li><li>Draw one box just outside each whole bin’s outer edge. Include the entire flat rim on all four sides; keep neighbouring bins outside the box.</li><li>Review the measured bowl and rim, give the layout a name, and save it.</li></ol>
+<p class="notice">This saves a layout for a new collection. Your open session and its captures stay unchanged.</p>
+<label><input id="layoutEmpty" type="checkbox" style="width:auto"> Every bin is empty, mounted in its usual position, and clear of the arm.</label>
+<div class="actions"><button id="layoutCheck">Check selected scene</button><button id="layoutCapture" class="primary" disabled>Capture empty scene</button><button id="layoutClose">Close editor</button></div>
+<p id="layoutStatus" class="layout-status" role="status" aria-live="polite"></p>
+<div id="layoutError" class="notice error hidden" role="alert"></div>
+<div id="layoutDrawing" class="hidden">
+<p class="muted">This is a top-down depth view in the selected reference frame. Drag just outside the complete outer edge, including every side of the flat top rim. It does not need to trace the curved bowl edge.</p>
+<svg id="layoutCanvas" class="layout-canvas" viewBox="0 0 800 600" role="img" aria-label="Empty scene. Draw a rectangle around each bin." tabindex="0"></svg>
+<div id="layoutBins"></div><button id="layoutAdd">Add another bin</button>
+<p class="muted">Start each bin name with a letter, such as <strong>left</strong>, <strong>right</strong> or <strong>resistors</strong>. Select Draw again to replace a box. Remove any box drawn on the wrong object.</p>
+<button id="layoutAnalyze" class="primary" disabled>Find bowl and top rim</button>
+</div>
+<div id="layoutReview" class="hidden"><h3>Check every bin before saving</h3><p>Check the entire outer rim on every side against the original picture. The cyan interior should cover the bowl, and orange should cover the visible flat rim all the way around. A box can pass the checks while cutting off part of the rim. Redraw if any part is missing or a neighbouring bin is included.</p><div id="layoutAnalysis"></div>
+<label for="layoutName">Layout name</label><input id="layoutName" maxlength="80" placeholder="Resistor station — two bins">
+<label><input id="layoutReviewed" type="checkbox" style="width:auto"> I checked every bin’s bowl and top rim.</label>
+<button id="layoutSave" class="primary" disabled>Save and select layout</button></div>
+</section>
+<section><p class="muted">2. Capture scenes — follow one instruction at a time</p><h2 id="title">Prepare a new bin setup</h2><p id="sessionDetails" class="muted"></p><div id="exposures"></div><p id="instructions" class="instructions">New setup collects all selected bins together. After empty captures, place exactly one resistor in each bin at the same named location: center, toward each of the four sides, then the bottom-left diagonal. Each location has three arrangements; rotate or reposition each resistor between arrangements. Finally collect three normal and three full arrangements, using your usual production fill amounts without an exact count.</p>
 <div id="bins" class="bins"></div><p id="progressText" class="muted"></p><progress id="progress" value="0" max="1"></progress>
 <p id="retry" class="notice hidden">This scene has an interrupted capture. Ready will preserve that attempt and retake the whole scene. Prepare the pictured arrangement again.</p>
 <div class="actions"><button id="ready" class="primary" disabled>Scene ready — capture exposures</button><button id="previewButton" disabled>Preview cameras</button><button id="stop" class="danger" disabled>Stop after current capture</button></div>
@@ -35,27 +58,198 @@
 <div id="error" class="notice error hidden" role="alert"></div><div id="message" class="notice hidden" aria-live="polite"></div>
 <figure id="previewFigure" class="hidden"><img id="preview" alt="Fresh top-down depth preview of the configured bins"><figcaption id="previewCaption" class="muted"></figcaption></figure>
 </section>
-<section><h2>Train and validate</h2><p class="muted">Fit the empty-bin geometry and camera corrections, then replay the saved empty, resistor and filled scenes through the production detector. The model is saved as JSON metadata and binary numerical arrays.</p>
+<section><h2>3. Add a CAD reference (optional)</h2>
+<p>Have the bin’s STL file? Upload it here. You can also skip this step and train using the captured bin surfaces.</p>
+<label for="cadFile">Bin CAD file (.stl, up to 16 MiB)</label><input id="cadFile" type="file" accept=".stl">
+<label for="cadTarget">Use this file for</label><select id="cadTarget"><option value="all">All selected bins (same shape)</option></select>
+<button id="cadUpload" disabled>Upload CAD</button>
+<p class="muted">Upload the complete bin, including the flat top rim. Different bin shapes can use separate uploads. STL files do not declare units or which direction points upward: choose these below.</p>
+<div id="cadPlacement"></div>
+<button id="cadPreviewButton" disabled>Preview CAD placement</button>
+<p id="cadPlacementHelp" class="muted">Open a collection session to upload CAD. Complete the captures before previewing placement.</p>
+<div id="cadPreview" class="hidden"></div>
+<label id="cadConfirmLabel" class="hidden"><input id="cadReviewed" type="checkbox" style="width:auto"> I checked the bin size and orientation in every preview.</label>
+<button id="cadConfirm" class="hidden" disabled>Confirm CAD reference</button>
+</section>
+<section><h2>4. Build and validate</h2><p class="muted">Fit the empty-bin geometry and camera corrections, then replay the saved empty, resistor and filled scenes through the production detector. Every build creates a separate candidate.</p>
+<label for="cadReference">Geometry reference for this build (optional)</label><select id="cadReference" disabled><option value="">Measured captures only</option></select>
+<p id="cadReferenceHelp" class="muted">Open a session to see CAD references commissioned for its scene, reference frame and bins.</p>
+<p class="muted">CAD guides the shape while empty-bin captures retain the physical bin’s measured deviations. Printed and CNC bins use the same validation checks; choosing CAD does not loosen detection thresholds.</p>
 <div class="actions"><button id="build" class="primary" disabled>Build and validate</button><button id="review" disabled>Review saved results</button><button id="quick" disabled>Validate empty check</button></div>
 <div id="acceptance"></div><div class="actions"><button id="activate" disabled>Use this model</button><button id="rollback">Restore previous model</button></div>
 <p class="muted">Use this model requires passed physical validation and an available Perception reload service. It verifies the loaded model identity and restores the previous configuration if activation fails.</p>
 <details open><summary>Activity</summary><pre id="log">Waiting for a session.</pre></details>
 </section></div></main>
 <script>
-const token='__API_TOKEN__';let state=null,acceptance=null,lastResult=null,pending=false,connected=false;
+const token='__API_TOKEN__';let state=null,acceptance=null,lastResult=null,pending=false,connected=false,cadPreviewPath=null,lastSubmittedCommand=null;
 const $=id=>document.getElementById(id);const text=(id,value)=>$(id).textContent=value;
-async function command(command,values={}){if(command==='build'||command==='quick_check'){acceptance=null;$('acceptance').replaceChildren();}pending=true;renderButtons();try{const r=await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json','X-Bin-Setup-Token':token},body:JSON.stringify({command,...values})});const value=await r.json();if(!r.ok)throw Error(value.error);await refresh();}catch(e){text('error',e.message);$('error').classList.remove('hidden');}finally{pending=false;renderButtons();}}
+let layoutDraft={context:null,preview:null,bins:[],selected:0,analysis:null,drag:null};
+function layoutContextRequest(){return {scene_id:Number($('sceneInput').value),camera_calibration:$('cameraCalibration').value,robot_calibration:$('robotCalibration').value};}
+function layoutContextKey(){return JSON.stringify(layoutContextRequest());}
+function invalidateLayoutAnalysis(){layoutDraft.analysis=null;$('layoutReviewed').checked=false;$('layoutReview').classList.add('hidden');}
+function resetLayoutPreview(){layoutDraft={context:layoutContextKey(),preview:null,bins:[],selected:0,analysis:null,drag:null};$('layoutDrawing').classList.add('hidden');invalidateLayoutAnalysis();text('layoutStatus','Empty all bins, check the selected scene, then capture a view.');}
+function showLayoutEditor(){
+  if(layoutDraft.context!==layoutContextKey())resetLayoutPreview();
+  $('layoutEditor').classList.remove('hidden');
+  text('layoutContext','Scene '+$('sceneInput').value+' · '+($('robotCalibration').selectedOptions?.[0]?.textContent||'selected reference frame'));
+  $('layoutEditor').scrollIntoView?.({behavior:'smooth',block:'start'});renderButtons();
+}
+function layoutNamesValid(){return layoutDraft.bins.length>0&&layoutDraft.bins.every(bin=>/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(bin.bin_id))&&new Set(layoutDraft.bins.map(bin=>bin.bin_id)).size===layoutDraft.bins.length;}
+function layoutSelectionRequest(){return {preview_path:layoutDraft.preview.path,bins:layoutDraft.bins.map(bin=>({bin_id:bin.bin_id,rectangle:[...bin.rectangle]}))};}
+function addLayoutBin(){
+  let number=1;while(layoutDraft.bins.some(bin=>bin.bin_id==='bin_'+number))number++;
+  layoutDraft.bins.push({bin_id:'bin_'+number,rectangle:null});layoutDraft.selected=layoutDraft.bins.length-1;
+  invalidateLayoutAnalysis();renderLayoutBins();renderLayoutDrawing();renderButtons();
+  text('layoutStatus','Drag just outside the outer edge of '+layoutDraft.bins[layoutDraft.selected].bin_id+', including the rim on every side.');
+}
+function renderLayoutBins(){
+  $('layoutBins').replaceChildren();
+  layoutDraft.bins.forEach((bin,index)=>{
+    const row=document.createElement('div');row.className='layout-row'+(index===layoutDraft.selected?' selected':'');
+    const name=document.createElement('input');name.value=bin.bin_id;name.maxLength=64;name.setAttribute('aria-label','Name of bin '+(index+1));
+    name.oninput=()=>{bin.bin_id=name.value.trim();invalidateLayoutAnalysis();renderLayoutDrawing();renderButtons();text('layoutStatus',layoutNamesValid()?'Bin names updated. Review the boxes, then find the bowl and rim.':'Give every bin a different name starting with a letter, followed by letters, numbers, hyphens or underscores (up to 64 characters).');};
+    const status=document.createElement('span');status.className='muted';status.textContent=bin.rectangle?'Box drawn':'Draw a box';
+    const redraw=document.createElement('button');redraw.textContent=bin.rectangle?'Draw again':'Select';redraw.onclick=()=>{layoutDraft.selected=index;renderLayoutBins();renderLayoutDrawing();text('layoutStatus','Drag a new box around '+bin.bin_id+'.');};
+    const remove=document.createElement('button');remove.textContent='Remove';remove.onclick=()=>{layoutDraft.bins.splice(index,1);layoutDraft.selected=Math.min(layoutDraft.selected,layoutDraft.bins.length-1);invalidateLayoutAnalysis();renderLayoutBins();renderLayoutDrawing();renderButtons();};
+    row.append(name,status,redraw,remove);$('layoutBins').append(row);
+  });
+}
+function renderLayoutDrawing(){
+  const preview=layoutDraft.preview;if(!preview)return;const svg=$('layoutCanvas');
+  const width=preview.width_px||preview.width,height=preview.height_px||preview.height;
+  svg.setAttribute('viewBox','0 0 '+width+' '+height);svg.replaceChildren(svgElement('image',{href:'data:image/png;base64,'+preview.preview_png,x:0,y:0,width,height}));
+  const bins=layoutDraft.bins.map((bin,index)=>({...bin,rectangle:index===layoutDraft.selected&&layoutDraft.drag?layoutRectangle(layoutDraft.drag.start,layoutDraft.drag.end):bin.rectangle}));
+  bins.forEach((bin,index)=>{
+    if(!bin.rectangle)return;const [x0,y0,x1,y1]=bin.rectangle,selected=index===layoutDraft.selected;
+    svg.append(svgElement('rect',{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:selected?'#14b89c22':'#ffffff12',stroke:selected?'#25e6b8':'#ffffff','stroke-width':Math.max(2,width/500),'vector-effect':'non-scaling-stroke'}));
+    svg.append(svgElement('text',{x:x0+6,y:Math.max(26,y0-7),fill:'white',stroke:'#183448','stroke-width':3,'paint-order':'stroke','font-family':'system-ui,sans-serif','font-size':Math.max(24,width/35)},bin.bin_id));
+  });
+}
+function layoutRectangle(start,end){return [Math.min(start[0],end[0]),Math.min(start[1],end[1]),Math.max(start[0],end[0]),Math.max(start[1],end[1])].map(Math.round);}
+function layoutPointer(event){const svg=$('layoutCanvas'),point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;const result=point.matrixTransform(svg.getScreenCTM().inverse()),preview=layoutDraft.preview;return [Math.max(0,Math.min((preview.width_px||preview.width)-1,result.x)),Math.max(0,Math.min((preview.height_px||preview.height)-1,result.y))];}
+$('layoutCanvas').onpointerdown=event=>{
+  if(pending||state?.busy||!connected||!layoutDraft.preview||layoutDraft.selected<0||!layoutDraft.bins.length||event.button!==0)return;
+  const point=layoutPointer(event);layoutDraft.drag={start:point,end:point};$('layoutCanvas').setPointerCapture(event.pointerId);event.preventDefault();
+};
+$('layoutCanvas').onpointermove=event=>{if(!layoutDraft.drag)return;layoutDraft.drag.end=layoutPointer(event);renderLayoutDrawing();};
+$('layoutCanvas').onpointerup=event=>{
+  if(!layoutDraft.drag)return;const rectangle=layoutRectangle(layoutDraft.drag.start,layoutPointer(event));layoutDraft.drag=null;
+  if(rectangle[2]-rectangle[0]<8||rectangle[3]-rectangle[1]<8){text('layoutStatus','That box is too small. Drag around the complete bin and its top rim.');renderLayoutDrawing();return;}
+  layoutDraft.bins[layoutDraft.selected].rectangle=rectangle;invalidateLayoutAnalysis();renderLayoutDrawing();renderLayoutBins();renderButtons();
+  text('layoutStatus','Box saved. Add another bin, or click Find bowl and top rim.');
+};
+$('layoutCanvas').onpointercancel=()=>{layoutDraft.drag=null;renderLayoutDrawing();};
+$('layoutOpen').onclick=showLayoutEditor;$('layoutClose').onclick=()=>$('layoutEditor').classList.add('hidden');
+$('layoutCheck').onclick=()=>command('check_connection',{scene_id:Number($('sceneInput').value),layout:true});
+$('layoutCapture').onclick=()=>{resetLayoutPreview();command('layout_preview',{...layoutContextRequest(),exposure_ms:8,empty_confirmed:$('layoutEmpty').checked,ready_token:state.ready_token});};
+$('layoutEmpty').onchange=renderButtons;
+$('layoutAdd').onclick=addLayoutBin;
+$('layoutAnalyze').onclick=()=>{invalidateLayoutAnalysis();command('layout_analyze',layoutSelectionRequest());};
+$('layoutReviewed').onchange=renderButtons;$('layoutName').oninput=renderButtons;
+$('layoutSave').onclick=()=>command('layout_save',{analysis_path:layoutDraft.analysis.path,name:$('layoutName').value.trim(),confirmed:$('layoutReviewed').checked});
+function restoreLayoutContext(preview){
+  if(preview.scene_id!==undefined&&String(preview.scene_id)!==$('sceneInput').value){$('sceneInput').value=String(preview.scene_id);renderConfiguration();}
+  if(preview.robot_calibration){$('robotCalibration').value=preview.robot_calibration;renderConfiguration();}
+  if(preview.camera_calibration)$('cameraCalibration').value=preview.camera_calibration;
+}
+function showSavedLayout(saved){
+  restoreLayoutContext(saved);$('layoutInput').value=saved.path;renderConfiguration();invalidateLayoutAnalysis();
+  text('layoutStatus','Saved '+saved.label+'. It is selected in the sidebar. Choose the bins and click New setup when ready.');
+}
+function showLayoutPreview(preview){
+  restoreLayoutContext(preview);
+  layoutDraft.context=layoutContextKey();
+  layoutDraft.preview=preview;layoutDraft.bins=[];layoutDraft.selected=0;invalidateLayoutAnalysis();
+  $('layoutDrawing').classList.remove('hidden');showLayoutEditor();addLayoutBin();
+}
+function showLayoutAnalysis(analysis){
+  if(analysis.preview){
+    if(layoutDraft.preview?.path!==analysis.preview.path)showLayoutPreview(analysis.preview);
+    if(analysis.selections){layoutDraft.bins=analysis.selections.map(bin=>({bin_id:bin.bin_id,rectangle:[...bin.rectangle]}));layoutDraft.selected=0;renderLayoutBins();renderLayoutDrawing();}
+  }
+  layoutDraft.analysis=analysis;$('layoutAnalysis').replaceChildren();
+  if(analysis.preview_png){const image=document.createElement('img');image.className='layout-review-image';image.src='data:image/png;base64,'+analysis.preview_png;image.alt='Measured bowl interiors in cyan and flat top rims in orange for the selected bins.';$('layoutAnalysis').append(image);}
+  const legend=document.createElement('p');legend.className='layout-legend';for(const [kind,label] of [['interior','Measured bowl'],['rim','Top rim']]){const item=document.createElement('span');item.className=kind;item.textContent=label;legend.append(item);}$('layoutAnalysis').append(legend);
+  for(const bin of analysis.bins||[]){const p=document.createElement('p');p.textContent=bin.bin_id+' · '+Number(bin.width_mm).toFixed(0)+' × '+Number(bin.depth_mm).toFixed(0)+' mm wide · '+Number(bin.height_mm).toFixed(0)+' mm deep';$('layoutAnalysis').append(p);}
+  for(const note of analysis.notes||[]){const p=document.createElement('p');p.className='notice';p.textContent=note;$('layoutAnalysis').append(p);}
+  $('layoutReview').classList.remove('hidden');$('layoutReviewed').checked=false;text('layoutStatus','Review the bowl and top rim for every bin below.');
+  $('layoutReview').scrollIntoView?.({behavior:'smooth',block:'start'});
+}
+async function command(command,values={}){lastSubmittedCommand=command;if(command.startsWith('layout_')){text('layoutError','');$('layoutError').classList.add('hidden');text('layoutStatus',({layout_preview:'Capturing an empty scene…',layout_analyze:'Finding each bowl and top rim…',layout_save:'Saving the reviewed layout…'})[command]||'Working…');}if(command==='build'||command==='quick_check'){acceptance=null;$('acceptance').replaceChildren();}pending=true;renderButtons();try{const r=await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json','X-Bin-Setup-Token':token},body:JSON.stringify({command,...values})});const value=await r.json();if(!r.ok)throw Error(value.error);await refresh();}catch(e){text('error',e.message);$('error').classList.remove('hidden');if(command.startsWith('layout_')){text('layoutError',e.message);$('layoutError').classList.remove('hidden');}}finally{pending=false;renderButtons();}}
 function selectedBins(){return [...$('binSelection').querySelectorAll('input:checked')].map(item=>item.value);}
 function setupRequest(quick=false){return {name:$('name').value.trim(),quick,scene_id:Number($('sceneInput').value),camera_calibration:$('cameraCalibration').value,robot_calibration:$('robotCalibration').value,bin_config:$('layoutInput').value,bin_ids:selectedBins(),exposures_ms:$('exposureInput').value.split(',').map(x=>Number(x.trim()))};}
 $('prepare').onclick=()=>command('prepare',setupRequest());$('check').onclick=()=>command('prepare',setupRequest(true));
 $('open').onclick=()=>{acceptance=null;lastResult=null;command('select',{session_path:$('sessions').value});};
 $('ready').onclick=()=>command('capture_stage',{stage_id:state.current_stage.id,ready_token:state.ready_token});
-$('checkConnection').onclick=()=>command('check_connection',{scene_id:Number($('sceneInput').value)});
-$('previewButton').onclick=()=>command('preview');$('stop').onclick=()=>command('stop');$('build').onclick=()=>command('build');$('review').onclick=()=>command('review');$('quick').onclick=()=>command('quick_check');$('activate').onclick=()=>command('activate');$('rollback').onclick=()=>command('rollback');
+$('checkConnection').onclick=()=>command('check_connection',{scene_id:state?.session?.scene_id??Number($('sceneInput').value)});
+$('previewButton').onclick=()=>command('preview');$('stop').onclick=()=>command('stop');$('build').onclick=()=>command('build',{cad_reference:$('cadReference').value});$('review').onclick=()=>command('review');$('quick').onclick=()=>command('quick_check');$('activate').onclick=()=>command('activate');$('rollback').onclick=()=>command('rollback');
+$('cadFile').onchange=renderButtons;
+$('cadReviewed').onchange=renderButtons;
+$('cadUpload').onclick=async()=>{
+  const file=$('cadFile').files[0];if(!file)return;
+  pending=true;renderButtons();
+  try{
+    if(file.size>16*1024*1024)throw Error('Choose an STL no larger than 16 MiB.');
+    const response=await fetch('/api/cad-upload',{method:'POST',headers:{'Content-Type':'application/octet-stream',
+      'X-Bin-Setup-Token':token,'X-Cad-Filename':encodeURIComponent(file.name),'X-Cad-Target':$('cadTarget').value},body:file});
+    const result=await response.json();if(!response.ok)throw Error(result.error);await refresh();
+  }catch(error){text('error',error.message);$('error').classList.remove('hidden');}
+  finally{pending=false;renderButtons();}
+};
+function cadSelections(){
+  const result={};for(const row of $('cadPlacement').querySelectorAll('[data-bin]')){
+    result[row.dataset.bin]={upload:row.querySelector('[data-field="upload"]').value,
+      units:row.querySelector('[data-field="units"]').value,up_axis:row.querySelector('[data-field="up_axis"]').value,
+      yaw_deg:Number(row.querySelector('[data-field="yaw_deg"]').value)};
+  }return result;
+}
+$('cadPreviewButton').onclick=()=>{cadPreviewPath=null;$('cadReviewed').checked=false;command('cad_preview',{selections:cadSelections()});};
+$('cadConfirm').onclick=()=>command('cad_confirm',{preview_path:cadPreviewPath,confirmed:$('cadReviewed').checked});
+function renderCadUploads(){
+  const session=state?.session,cad=state?.cad||{uploads:[],selection:{}};
+  const bins=session?.bin_ids||[];
+  setOptions('cadTarget',[{value:'all',label:'All selected bins (same shape)'},...bins.map(value=>({value,label:value}))],'all','Open a session');
+  const signature=JSON.stringify([state?.session_path,cad.uploads,cad.selection]);
+  if($('cadPlacement').dataset.signature===signature)return;
+  $('cadPlacement').dataset.signature=signature;$('cadPlacement').replaceChildren();cadPreviewPath=null;
+  $('cadPreview').classList.add('hidden');$('cadConfirmLabel').classList.add('hidden');$('cadConfirm').classList.add('hidden');$('cadReviewed').checked=false;
+  for(const bin of bins){
+    if(!cad.uploads.length)break;
+    const row=document.createElement('fieldset');row.dataset.bin=bin;row.style='margin:16px 0;border:1px solid #dbe4e9;border-radius:8px';
+    const legend=document.createElement('legend');legend.textContent=bin;row.append(legend);
+    const saved=cad.selection[bin]||{};
+    for(const [field,label,options] of [
+      ['upload','CAD file',[['','Choose uploaded file'],...cad.uploads.map(item=>[item.id,item.filename])]],
+      ['units','STL units',[['mm','Millimetres (mm)'],['cm','Centimetres (cm)'],['m','Metres (m)'],['in','Inches']]],
+      ['up_axis','Axis pointing out of the bowl',[['+Z','+Z'],['-Z','−Z'],['+Y','+Y'],['-Y','−Y'],['+X','+X'],['-X','−X']]],
+      ['yaw_deg','Rotation around the upward axis',[[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']]]]){
+      const wrapper=document.createElement('label');wrapper.textContent=label;
+      const select=document.createElement('select');select.dataset.field=field;
+      for(const [value,caption] of options)select.add(new Option(caption,String(value)));
+      if(saved[field]!==undefined)select.value=String(saved[field]);
+      select.onchange=()=>{cadPreviewPath=null;$('cadReviewed').checked=false;$('cadConfirm').disabled=true;renderButtons();};
+      wrapper.append(select);row.append(wrapper);
+    }$('cadPlacement').append(row);
+  }
+  text('cadPlacementHelp',!session?'Open a collection session to upload CAD.':
+    !cad.uploads.length?'Upload the bin STL, or skip CAD and continue to Build and validate.':
+    'Choose the units and upward axis from the CAD drawing. Preview uses only saved empty-training measurements. Try another quarter turn if the cross-sections do not match.');
+}
+function showCadPreview(preview){
+  cadPreviewPath=preview.path;const panel=$('cadPreview');panel.replaceChildren();
+  const note=document.createElement('p');note.className='notice';note.textContent=preview.note;panel.append(note);
+  for(const bin of preview.bins){
+    const title=document.createElement('h3');title.textContent=bin.bin_id+' · '+bin.filename;panel.append(title);
+    const detail=document.createElement('p');detail.className='muted';detail.textContent='CAD dimensions: '+bin.dimensions_mm.map(value=>value.toFixed(1)).join(' × ')+' mm. Measured overlap: '+(100*bin.measured_overlap_fraction).toFixed(0)+'%. Height difference p95: '+bin.absolute_residual_p95_mm.toFixed(2)+' mm.';panel.append(detail);
+    const image=document.createElement('img');image.src='data:image/png;base64,'+bin.preview_png;image.alt=bin.bin_id+': blue measured empty-bin outline and sections overlaid with orange CAD';image.style='width:100%;height:auto';panel.append(image);
+  }panel.classList.remove('hidden');$('cadReviewed').checked=false;$('cadConfirmLabel').classList.remove('hidden');$('cadConfirm').classList.remove('hidden');
+}
 function renderButtons(){
   const busy=pending||!connected||!state||state.busy,has=!!state?.session;
   const done=has&&!state.current_stage,check=state?.session?.mode==='check';
   const camera=state?.camera_connection,cameraReady=camera?.ready===true&&!camera?.checking;
+  const sessionCameraReady=cameraReady&&camera.scene_id===state?.session?.scene_id;
+  const layoutCameraReady=cameraReady&&camera.scene_id===Number($('sceneInput').value);
   for(const id of ['prepare','check','open','rollback'])$(id).disabled=busy;
   for(const id of ['sceneInput','cameraCalibration','robotCalibration','layoutInput','name','exposureInput'])$(id).disabled=busy;
   for(const input of $('binSelection').querySelectorAll('input'))input.disabled=busy;
@@ -65,10 +259,28 @@ function renderButtons(){
   $('rollback').disabled=busy||!state?.catalog?.active?.history?.length;
   $('checkConnection').disabled=busy||!!camera?.checking;
   $('checkConnection').textContent=camera?.checking?'Checking…':'Check connection';
-  $('ready').disabled=busy||!state?.current_stage||!cameraReady;
-  $('previewButton').disabled=busy||!state?.current_stage||!cameraReady;
+  $('ready').disabled=busy||!state?.current_stage||!sessionCameraReady;
+  $('previewButton').disabled=busy||!state?.current_stage||!sessionCameraReady;
+  const layoutConfigured=!!$('cameraCalibration').value&&!!$('robotCalibration').value;
+  $('layoutOpen').disabled=busy||!layoutConfigured;
+  $('layoutCheck').disabled=busy||!layoutConfigured||!!camera?.checking;
+  $('layoutCapture').disabled=busy||!layoutConfigured||!layoutCameraReady||!$('layoutEmpty').checked;
+  $('layoutEmpty').disabled=busy;
+  $('layoutAdd').disabled=busy||!layoutDraft.preview;
+  for(const input of $('layoutBins').querySelectorAll('input,button'))input.disabled=busy;
+  $('layoutAnalyze').disabled=busy||!layoutDraft.preview||!layoutNamesValid()||layoutDraft.bins.some(bin=>!bin.rectangle);
+  $('layoutName').disabled=busy;$('layoutReviewed').disabled=busy||!layoutDraft.analysis;
+  $('layoutSave').disabled=busy||!layoutDraft.analysis||!$('layoutReviewed').checked||!$('layoutName').value.trim();
   $('stop').disabled=!connected||state?.active_command!=='capture_stage'||state?.stop_requested;
   $('build').disabled=busy||!done||check;
+  $('cadReference').disabled=busy||!has||check;
+  for(const id of ['cadFile','cadTarget'])$(id).disabled=busy||!has||check;
+  for(const select of $('cadPlacement').querySelectorAll('select'))select.disabled=busy||check;
+  $('cadUpload').disabled=busy||!has||check||!$('cadFile').files?.length;
+  const selections=cadSelections();
+  $('cadPreviewButton').disabled=busy||!done||check||!Object.keys(selections).length||Object.values(selections).some(item=>!item.upload);
+  $('cadReviewed').disabled=busy||!cadPreviewPath;
+  $('cadConfirm').disabled=busy||!cadPreviewPath||!$('cadReviewed').checked;
   $('quick').disabled=busy||!done||!check;
   $('review').disabled=busy||!state?.review_exists;
   const passed=acceptance?.status==='passed'&&acceptance?.purpose==='factory_acceptance'&&acceptance?.pipeline==='production_summit'&&!acceptance?.synthetic&&acceptance?.results?.length&&!acceptance?.missing_evidence?.length&&acceptance.results.every(x=>x.passed);
@@ -79,6 +291,19 @@ function setOptions(id,entries,preferred,empty){
   select.replaceChildren(...entries.map(item=>new Option(item.label,String(item.value))));
   if(!entries.length){select.add(new Option(empty,''));return;}
   select.value=entries.some(item=>String(item.value)===value)?value:entries.some(item=>String(item.value)===String(preferred))?String(preferred):String(entries[0].value);
+}
+function renderCadReferences(){
+  const session=state?.session,select=$('cadReference');
+  const bins=session?.bin_ids||Object.keys(session?.stages?.[0]?.bins||{});
+  const references=[...(state?.catalog?.configuration?.cad_references||[]),...(state?.cad?.references||[])].filter(item=>
+    session&&item.scene_id===session.scene_id&&item.frame_id===session.frame_id&&bins.length&&bins.every(bin=>item.bin_ids.includes(bin)));
+  const sessionKey=state?.session_path||'';
+  if(select.dataset.session!==sessionKey){select.value='';select.dataset.session=sessionKey;}
+  setOptions('cadReference',[{value:'',label:'Measured captures only'},...references.map(item=>({value:item.path,label:item.label}))],'','Measured captures only');
+  text('cadReferenceHelp',!session?'Open a session to see CAD references commissioned for its scene, reference frame and bins.':
+    session.mode==='check'?'An empty check validates the active model without fitting new geometry.':
+    references.length?'References for the open session: scene '+session.scene_id+' · '+session.frame_id+' frame · '+bins.join(', ')+'. Each build creates a separate candidate.':
+    'Use measured captures, or upload and confirm a CAD reference in step 3.');
 }
 function renderConfiguration(reset=false){
   const config=state?.catalog?.configuration;if(!config)return;
@@ -96,6 +321,7 @@ function renderConfiguration(reset=false){
   const layouts=config.layouts.filter(item=>item.scene_id===scene&&item.frame_id===frame);
   setOptions('layoutInput',layouts.map(item=>({value:item.path,label:item.label+' · '+item.bin_ids.length+' bin'+(item.bin_ids.length===1?'':'s')})),defaults.bin_config,'No layout for this scene/frame');
   const layout=layouts.find(item=>item.path===$('layoutInput').value);
+  $('layoutOpen').classList.toggle('primary',!layout);
   const binSignature=JSON.stringify(layout?[layout.path,layout.bin_ids]:null);
   if($('binSelection').dataset.signature!==binSignature){
     $('binSelection').replaceChildren();$('binSelection').dataset.signature=binSignature;
@@ -106,12 +332,12 @@ function renderConfiguration(reset=false){
   const missing=[];
   if(!eyesScene)missing.push('Configure this scene in artifacts/workflow_configs/bin_calibration.yaml using its deployed camera calibration.');
   if(!frame)missing.push('The reference frame needs an existing hand-eye calibration entry for this scene.');
-  if(!layout)missing.push('Configure a bin layout with this scene_id and frame_id under artifacts/data_saving/bin_model/layouts/.');
+  if(!layout)missing.push('Click Create bin layout to mark each empty bin on a picture.');
   else if(!bins.length)missing.push('Select at least one bin to collect.');
   text('configurationHelp',missing.length?missing.join(' '):'Bins: '+bins.join(', ')+'. Eyes uses artifacts/workflow_configs/bin_calibration.yaml and its deployed camera calibration.');
   text('configurationIssueText',(config.issues||[]).join('\n'));$('configurationIssues').classList.toggle('hidden',!config.issues?.length);
 }
-for(const id of ['sceneInput','cameraCalibration','robotCalibration','layoutInput'])$(id).onchange=()=>{renderConfiguration();renderButtons();};
+for(const id of ['sceneInput','cameraCalibration','robotCalibration','layoutInput'])$(id).onchange=()=>{renderConfiguration();if(layoutDraft.context&&layoutDraft.context!==layoutContextKey()){resetLayoutPreview();$('layoutEmpty').checked=false;text('layoutContext','Scene '+$('sceneInput').value+' · '+($('robotCalibration').selectedOptions?.[0]?.textContent||'selected reference frame'));}renderButtons();};
 function renderCameraConnection(){
   const camera=state?.camera_connection||{},panel=$('cameraStatus');
   let label,message,kind='';
@@ -230,7 +456,7 @@ if(report.placement_evidence==='operator_confirmed_directional'){
   panel.append(evidence);
 }
 const result=document.createElement('p');result.className='notice '+(report.status==='passed'?'good':'error');const failed=(report.results||[]).filter(x=>!x.passed);result.textContent=(report.status==='passed'?'Validation passed':'Validation failed')+' · '+(report.model_name||'')+' · '+report.capture_count+' captures'+(report.synthetic?' · synthetic development data':'')+' · '+failed.length+' failed bin checks';panel.append(result);if(report.missing_evidence?.length){const p=document.createElement('p');p.textContent='Missing evidence: '+report.missing_evidence.join(', ');panel.append(p);}if(failed.length){const table=document.createElement('table');for(const item of failed){const row=table.insertRow();for(const value of [item.capture_id,item.bin_id,item.exposure_ms+' ms',(item.reasons||[]).join('; ')])row.insertCell().textContent=value;}panel.append(table);}const p=document.createElement('p');p.className='muted';p.textContent='Tested exposure settings: '+(report.exposures_ms||[]).join(', ')+' ms. Intermediate settings and other lighting conditions need their own evidence.';panel.append(p);}
-function render(){const s=state;renderConfiguration();const sessionChanged=$('title').dataset.session!==s.session_path;if(sessionChanged){acceptance=null;lastResult=null;$('acceptance').replaceChildren();$('previewFigure').classList.add('hidden');$('title').dataset.session=s.session_path||'';}text('connection',s.busy?'Working…':'Local app ready');renderCameraConnection();text('storage',s.storage_free_gb+' GB available');const selected=$('sessions').value;const paths=s.catalog.sessions;const signature=JSON.stringify(paths);if($('sessions').dataset.signature!==signature){$('sessions').replaceChildren(new Option('Choose a session',''),...paths.map(path=>new Option(path.split('/').pop(),path)));$('sessions').dataset.signature=signature;$('sessions').value=paths.includes(selected)?selected:s.session_path||'';}text('title',s.session?s.session.session_id:'Prepare a new bin setup');text('sessionDetails',s.session?'Scene '+s.session.scene_id+' · '+s.session.frame_id+' frame · '+(s.session.bin_ids||Object.keys(s.session.stages?.[0]?.bins||{})).join(', '):'');$('stages').replaceChildren();for(const stage of s.stages){const div=document.createElement('div');div.className='stage '+(stage.id===s.current_stage?.id?'current':stage.finished?'done':'');div.textContent=stageTitle(stage)+' · '+stage.completed+'/'+stage.total;$('stages').append(div);}if(s.session){text('instructions',s.current_stage?s.current_stage.instructions:'All collection scenes are complete. Build and validate the model below.');diagrams(s.current_stage);$('exposures').replaceChildren(...[...new Set(s.session.captures.map(c=>c.exposure_ms))].map(e=>{const span=document.createElement('span');span.className='pill';span.textContent=e+' ms';return span;}));}text('progressText',s.total?s.completed+' / '+s.total+' captures saved'+(s.busy?' · leave the current scene unchanged':''):'');$('progress').max=s.total||1;$('progress').value=s.completed;$('retry').classList.toggle('hidden',!s.current_stage?.completed||s.busy);text('error',s.error||'');$('error').classList.toggle('hidden',!s.error);text('log',s.logs.join('\n')||'Waiting for a session.');const result=JSON.stringify(s.result);if(s.result&&result!==lastResult){lastResult=result;if(s.result.preview_png){$('preview').src='data:image/png;base64,'+s.result.preview_png;text('previewCaption',s.result.caption);$('previewFigure').classList.remove('hidden');}if(s.result.acceptance)showAcceptance(s.result.acceptance);if(s.result.runtime_verified){text('message','Model loaded and verified: '+s.result.model_path);$('message').classList.remove('hidden');}}renderButtons();}
+function render(){const s=state;const guideKey=JSON.stringify([s.session_path,!!s.current_stage]);if($('sceneGuide').dataset.phase!==guideKey){$('sceneGuide').open=!!s.current_stage;$('sceneGuide').dataset.phase=guideKey;}renderConfiguration();renderCadReferences();renderCadUploads();const sessionChanged=$('title').dataset.session!==(s.session_path||'');if(sessionChanged){acceptance=null;lastResult=null;$('acceptance').replaceChildren();$('previewFigure').classList.add('hidden');$('title').dataset.session=s.session_path||'';}text('connection',s.busy?'Working…':'Local app ready');renderCameraConnection();text('storage',s.storage_free_gb+' GB available');const selected=$('sessions').value;const paths=s.catalog.sessions;const signature=JSON.stringify(paths);if($('sessions').dataset.signature!==signature){$('sessions').replaceChildren(new Option('Choose a session',''),...paths.map(path=>new Option(path.split('/').pop(),path)));$('sessions').dataset.signature=signature;$('sessions').value=paths.includes(selected)?selected:s.session_path||'';}text('title',s.session?s.session.session_id:'Prepare a new bin setup');text('sessionDetails',s.session?'Scene '+s.session.scene_id+' · '+s.session.frame_id+' frame · '+(s.session.bin_ids||Object.keys(s.session.stages?.[0]?.bins||{})).join(', '):'');$('stages').replaceChildren();for(const stage of s.stages){const div=document.createElement('div');div.className='stage '+(stage.id===s.current_stage?.id?'current':stage.finished?'done':'');div.textContent=stageTitle(stage)+' · '+stage.completed+'/'+stage.total;$('stages').append(div);}if(s.session){text('instructions',s.current_stage?s.current_stage.instructions:'All collection scenes are complete. Build and validate the model below.');diagrams(s.current_stage);$('exposures').replaceChildren(...[...new Set(s.session.captures.map(c=>c.exposure_ms))].map(e=>{const span=document.createElement('span');span.className='pill';span.textContent=e+' ms';return span;}));}text('progressText',s.total?s.completed+' / '+s.total+' captures saved'+(s.busy?' · leave the current scene unchanged':''):'');$('progress').max=s.total||1;$('progress').value=s.completed;$('retry').classList.toggle('hidden',!s.current_stage?.completed||s.busy);text('error',s.error||'');$('error').classList.toggle('hidden',!s.error);text('layoutError',s.error||'');$('layoutError').classList.toggle('hidden',!s.error||!lastSubmittedCommand?.startsWith('layout_'));if(s.error&&lastSubmittedCommand?.startsWith('layout_'))text('layoutStatus','Layout needs attention. Review the message below, then try again.');text('log',s.logs.join('\n')||'Waiting for a session.');const result=JSON.stringify(s.result);if(s.result&&result!==lastResult){lastResult=result;if(s.result.preview_png){$('preview').src='data:image/png;base64,'+s.result.preview_png;text('previewCaption',s.result.caption);$('previewFigure').classList.remove('hidden');}if(s.result.layout_preview)showLayoutPreview(s.result.layout_preview);if(s.result.layout_analysis)showLayoutAnalysis(s.result.layout_analysis);if(s.result.layout_saved)showSavedLayout(s.result.layout_saved);if(s.result.cad_preview)showCadPreview(s.result.cad_preview);if(s.result.cad_confirmed){$('cadReference').value=s.result.cad_confirmed;text('message','CAD reference selected. Continue to Build and validate.');$('message').classList.remove('hidden');}if(s.result.acceptance)showAcceptance(s.result.acceptance);if(s.result.runtime_verified){text('message','Model loaded and verified: '+s.result.model_path);$('message').classList.remove('hidden');}}renderButtons();}
 async function refresh(){
   try{
     const response=await fetch('/api/state');if(!response.ok)throw Error('Connection failed');

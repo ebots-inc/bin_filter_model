@@ -45,7 +45,7 @@ def connection_report(report, runtime):
 
 
 class HostCameraCapture:
-    runtime_root = '/root/artifacts/data_saving/bin_model/sessions'
+    runtime_root = '/tmp/bin-model-capture'
 
     def __init__(self, artifacts, container='auto', program=None):
         self.artifacts = Path(artifacts).resolve()
@@ -59,7 +59,30 @@ class HostCameraCapture:
         return runtime
 
     def program_path(self, runtime):
-        return self.program or runtime.to_runtime(self.artifacts / 'data_saving/bin_model/tools/native/bin_capture')
+        return self.program or '/root/bin_filter_offline/native/bin_capture'
+
+    def create_transfer(self, runtime):
+        result = subprocess.run(['docker', 'exec', runtime.container, 'mktemp', '-d',
+                                 '/tmp/bin-model-capture.XXXXXX'],
+                                capture_output=True, text=True, timeout=20)
+        remote = Path(result.stdout.strip())
+        if (result.returncode or remote.parent != Path('/tmp') or
+                not remote.name.startswith('bin-model-capture.') or '..' in remote.parts):
+            raise data.DatasetError(result.stderr.strip() or 'Cannot create camera transfer directory')
+        return remote
+
+    def copy_transfer(self, runtime, remote, local):
+        result = subprocess.run(['docker', 'cp', f'{runtime.container}:{remote}/capture', str(local)],
+                                capture_output=True, text=True, timeout=120)
+        if result.returncode:
+            raise data.DatasetError(result.stderr.strip() or 'Cannot copy captured camera data to this PC')
+
+    def remove_transfer(self, runtime, remote):
+        # create_transfer validates this exact mktemp path; never remove caller input.
+        result = subprocess.run(['docker', 'exec', runtime.container, 'rm', '-rf', '--', str(remote)],
+                                capture_output=True, text=True, timeout=20)
+        if result.returncode:
+            raise data.DatasetError(result.stderr.strip() or 'Cannot remove copied temporary camera data')
 
     def check(self, scene_id=0):
         runtime = self.runtime()
@@ -118,7 +141,7 @@ class HostCameraCapture:
         if part.read_bytes() != frozen_part.read_bytes():
             raise data.DatasetError('Registered camera settings differ from this session’s frozen settings')
         calibration, relocated = self.calibration_paths(folder, session, shared)
-        transfers = shared / 'transfers'
+        transfers = folder / '.transfers'
         transfers.mkdir(parents=True, exist_ok=True)
         # Keep failed attempts for diagnosis. A new attempt never overwrites them.
         index = 1
@@ -128,7 +151,9 @@ class HostCameraCapture:
             attempt = transfers / f'{destination.name}-attempt-{index:02d}'
         attempt.mkdir()
         staged = attempt / 'capture'
-        runtime_output = runtime.to_runtime(staged)
+        remote = self.create_transfer(runtime)
+        data.write_json(attempt / 'remote_capture.json', {'container': runtime.container, 'path': str(remote)})
+        runtime_output = str(remote / 'capture')
         arguments = [self.program_path(runtime), '--part-config', runtime.to_runtime(part),
                      '--part-name', str(part_name), '--camera-calibration', runtime.to_runtime(calibration['camera']),
                      '--robot-calibration', runtime.to_runtime(calibration['robot']),
@@ -137,7 +162,7 @@ class HostCameraCapture:
             arguments.append('--relocated-session')
         # The native client owns CUDA buffers until Eyes releases its imports.
         # A host deadline must not kill that owner while the request is active.
-        command = runtime.command(arguments, outputs=[runtime_output])
+        command = runtime.command(arguments)
         log = folder / 'logs' / (destination.name + '.log')
         log.parent.mkdir(exist_ok=True)
         progress(f"Capturing {capture['exposure_ms']:g} ms — {destination.name}")
@@ -152,6 +177,17 @@ class HostCameraCapture:
                     progress('Waiting for camera/Eyes to release buffers; no further captures will start '
                              f'until this request finishes. Log: {log}')
                     returncode = process.wait()
+        try:
+            self.copy_transfer(runtime, remote, staged)
+        except (data.DatasetError, OSError, subprocess.TimeoutExpired) as error:
+            tail = '\n'.join(log.read_text(errors='replace').splitlines()[-12:])
+            raise data.DatasetError(f'Capture transfer failed. Log: {log}\n{tail}\n{error}\n'
+                                    f'Temporary data: {runtime.container}:{remote}; local attempt: {attempt}') from error
+        try:
+            self.remove_transfer(runtime, remote)
+            (attempt / 'remote_capture.json').unlink()
+        except (data.DatasetError, OSError, subprocess.TimeoutExpired) as error:
+            progress(f'Images were copied; temporary camera files remain at {runtime.container}:{remote}: {error}')
         if returncode:
             tail = '\n'.join(log.read_text(errors='replace').splitlines()[-12:])
             raise data.DatasetError(f'Capture failed. Log: {log}\n{tail}\nTemporary data: {attempt}')

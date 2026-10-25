@@ -1,0 +1,32 @@
+# One acquisition contains every configured bin in this scene and both Denali sensors.
+# Select an existing scene calibration, robot frame, and matching measured bin layout.
+scene_id: 0
+denali_id: 0
+frame_id: B2
+length_unit: mm
+exposure_ms: [4.0, 8.0, 12.0, 16.0, 20.0]
+# Each step applies its exposure to both spotlight and structured light, on both sensors.
+# Two sensors, explicit 12-bit acquisition defaults from DenaliSettingsNormalizer.
+gain: [0.0, 0.0]
+black_level: [240, 240]
+empty_train_rounds: 7
+empty_test_rounds: 3
+# Repeats for unguided loaded captures; guided setup uses loaded_arrangements below.
+loaded_test_rounds: 3
+camera_calibration: calibration/deployment/camera/scene0_denali0_params.yaml
+robot_calibration: calibration/deployment/robot/B2_params.yaml
+bin_config: configs/bin_config.yaml
+# Optional bin_ids: [bin_a, bin_b]. Omit to collect every bin in bin_config.
+guided:
+  # Each loaded arrangement has a separate Ready confirmation and one exposure sweep.
+  loaded_arrangements: 3
+  wall_sides: [left, right, bottom, top]
+  resistor_capture_mode: simultaneous
+  normal_fill_instruction: "Add a representative everyday amount of production parts, spread naturally with some visible bin floor."
+  full_fill_instruction: "Add a representative full production load with varied positions and overlaps, within the station's normal fill limit."
+  acceptance:
+    verification_part: resistor
+    minimum_part_thickness_mm: null
+    normal_part_count: null
+    full_part_count: null
+    production_acceptance_limits: null

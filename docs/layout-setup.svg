@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="460" viewBox="0 0 1080 460" role="img" aria-labelledby="title description">
+<title id="title">Create a bin layout without measuring coordinates</title>
+<desc id="description">First draw a rectangle around every complete empty bin including its top rim. Next check the cyan bowl interior and orange top rim. Finally name and save the layout. These are schematic illustrations, not live camera images.</desc>
+<rect width="1080" height="460" rx="18" fill="#edf3f7"/>
+<g font-family="system-ui,sans-serif" fill="#183448">
+<g transform="translate(20 20)">
+<rect width="330" height="420" rx="12" fill="white"/>
+<circle cx="28" cy="32" r="17" fill="#175d8c"/><text x="28" y="38" fill="white" text-anchor="middle" font-size="18">1</text>
+<text x="55" y="38" font-weight="700" font-size="20">Mark every bin</text>
+<rect x="20" y="62" width="290" height="242" rx="8" fill="#254250"/>
+<g fill="#9bb0ba" stroke="#cedbe0" stroke-width="14"><ellipse cx="99" cy="180" rx="52" ry="72"/><ellipse cx="234" cy="180" rx="52" ry="72"/></g>
+<g fill="#557687"><ellipse cx="99" cy="183" rx="30" ry="44"/><ellipse cx="234" cy="183" rx="30" ry="44"/></g>
+<g fill="none" stroke="#26e6b7" stroke-width="3"><rect x="34" y="91" width="129" height="180"/><rect x="169" y="91" width="129" height="180"/></g>
+<g font-size="16" fill="white"><text x="40" y="83">left</text><text x="175" y="83">right</text></g>
+<text x="20" y="337" font-size="16">Drag around the whole bin.</text><text x="20" y="362" font-size="16">Include its flat top rim.</text><text x="20" y="387" font-size="16">Keep its neighbour outside.</text>
+</g>
+<g transform="translate(375 20)">
+<rect width="330" height="420" rx="12" fill="white"/>
+<circle cx="28" cy="32" r="17" fill="#175d8c"/><text x="28" y="38" fill="white" text-anchor="middle" font-size="18">2</text>
+<text x="55" y="38" font-weight="700" font-size="20">Review bowl and rim</text>
+<rect x="20" y="62" width="290" height="242" rx="8" fill="#254250"/>
+<g fill="#1aa9be" stroke="#e8a335" stroke-width="14"><ellipse cx="99" cy="180" rx="52" ry="72"/><ellipse cx="234" cy="180" rx="52" ry="72"/></g>
+<g fill="none" stroke="#69d0da" stroke-width="2"><ellipse cx="99" cy="183" rx="30" ry="44"/><ellipse cx="234" cy="183" rx="30" ry="44"/></g>
+<g font-size="16" fill="white"><text x="45" y="83">left</text><text x="180" y="83">right</text></g>
+<rect x="20" y="325" width="15" height="15" fill="#1aa9be"/><text x="43" y="338" font-size="16">Cyan: measured bowl</text>
+<rect x="20" y="351" width="15" height="15" fill="#e8a335"/><text x="43" y="364" font-size="16">Orange: flat top rim</text>
+<text x="20" y="390" font-size="16">Correct the box if either is wrong.</text>
+</g>
+<g transform="translate(730 20)">
+<rect width="330" height="420" rx="12" fill="white"/>
+<circle cx="28" cy="32" r="17" fill="#175d8c"/><text x="28" y="38" fill="white" text-anchor="middle" font-size="18">3</text>
+<text x="55" y="38" font-weight="700" font-size="20">Name and save</text>
+<text x="20" y="91" font-size="16">Layout name</text>
+<rect x="20" y="106" width="290" height="48" rx="7" fill="#f6f9fa" stroke="#b9cbd5"/><text x="32" y="136" font-size="17">Resistor station — two bins</text>
+<rect x="20" y="178" width="20" height="20" rx="3" fill="#087a68"/><path d="m24 187 4 5 8-10" fill="none" stroke="white" stroke-width="2"/>
+<text x="50" y="194" font-size="15">I checked every bowl and rim.</text>
+<rect x="20" y="225" width="290" height="48" rx="7" fill="#087a68"/><text x="165" y="255" text-anchor="middle" fill="white" font-size="18">Save and select layout</text>
+<text x="20" y="337" font-size="16">The app writes the coordinates.</text><text x="20" y="362" font-size="16">Select your bins in the sidebar.</text><text x="20" y="387" font-size="16">Then click New setup.</text>
+</g>
+</g>
+</svg>

@@ -249,7 +249,7 @@ def _correct_local(points, geometry, arrays):
     return corrected, selected, uncertainty[cell[:, 1], cell[:, 0]]
 
 
-def _measured_rim(surface, support, fit, band, settings):
+def _measured_rim(surface, support, fit, band, settings, *, cad_mask=None, cad_min_retained=.9):
     params = _parameters({key: value for key, value in settings.items() if key != 'height_band_mm'}, REGISTRATION_DEFAULTS, 'registration')
     cell_size = float(fit.get('cell_size_mm', 1.))
     observed = np.isfinite(surface)
@@ -277,6 +277,16 @@ def _measured_rim(surface, support, fit, band, settings):
         y0, y1 = max(0,-dy), min(ny,ny-dy)
         x0, x1 = max(0,-dx), min(nx,nx-dx)
         boundary[y0:y1,x0:x1] &= distance[y0:y1,x0:x1] <= distance[y0+dy:y1+dy,x0+dx:x1+dx]
+    cad_diagnostics = {}
+    if cad_mask is not None:
+        # Infer physical drops with all observed neighbors first. Cropping to
+        # CAD before this step would remove the lower evidence at the outer lip.
+        from cad_guidance import _retained
+        cad_diagnostics = {
+            'cad_surface_retained_fraction': _retained(flat, flat & cad_mask, cad_min_retained, 'flat rim'),
+            'cad_boundary_retained_fraction': _retained(boundary, boundary & cad_mask, cad_min_retained, 'rim boundary')}
+        flat &= cad_mask
+        boundary &= cad_mask
     bounds = np.asarray(fit['xy_bounds_mm'], dtype=float)
     seed = np.asarray(fit['seed_xy_mm'], dtype=float)
     def measured(mask):
@@ -297,7 +307,7 @@ def _measured_rim(surface, support, fit, band, settings):
             'source': 'measured_empty_captures',
             'method': 'flat_lip_nearest_observed_height_drop',
             'height_band_mm': band.tolist(), 'parameters': params,
-            'diagnostics': {'surface_points': len(points), 'boundary_points': len(edges),
+            'diagnostics': {**cad_diagnostics, 'surface_points': len(points), 'boundary_points': len(edges),
                             'surface_quadrants': q_surface.tolist(), 'boundary_quadrants': q_boundary.tolist(),
                             'measured_min_mm': points.min(axis=0).tolist(), 'measured_max_mm': points.max(axis=0).tolist(),
                             'minimum_capture_support': int(support[flat].min()),
@@ -360,10 +370,18 @@ def fit_model(captures, settings, frame_id='B2', model_name='bin-model'):
         # of replacing it with an assumed zero-error geometric surface.
         geometry['tolerance_role'] = 'measured_post_camera_correction_geometry_residual; runtime threshold is max with camera uncertainty'
         corrected_surface, support = _full_reference(corrected, fit)
-        registration = _measured_rim(corrected_surface, support, fit, band, config.get('registration', {}))
+        cad_record, cad_mask = None, None
+        if 'cad_reference' in config:
+            from cad_guidance import guide
+            geometry, cad_record, cad_mask = guide(geometry, corrected_surface, support, fit, band,
+                                                   config.get('registration', {}), config['cad_reference'])
+        registration = _measured_rim(corrected_surface, support, fit, band, config.get('registration', {}),
+            cad_mask=cad_mask, cad_min_retained=cad_record['parameters']['min_measured_retained_fraction'] if cad_record else .9)
         model['bins'][name] = provisional | {'geometry': geometry, 'robot_from_bin': placement.tolist(),
             'shape_name': config.get('shape_name', f'{model_name}-{name}-measured'), 'registration': registration,
             'camera_model_parameters': camera_parameters}
+        if cad_record is not None:
+            model['bins'][name]['cad_reference'] = cad_record
     validate_model(model)
     return model
 
@@ -392,6 +410,9 @@ def validate_model(model):
         if geometry.get('frame_id') != 'bin':
             raise data.DatasetError('Modern geometry must be bin-local')
         _, bounds, _, _ = hf._validated_model(geometry)
+        if 'cad_reference' in item:
+            from cad_guidance import validate as validate_cad
+            validate_cad(item['cad_reference'], geometry)
         if geometry.get('diagnostics', {}).get('capture_count') != len(training):
             raise data.DatasetError('Geometry support count differs from model training captures')
         shape = np.asarray(geometry['tolerance_mm'], dtype=float).shape

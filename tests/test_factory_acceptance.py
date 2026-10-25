@@ -161,7 +161,7 @@ class ProductionAcceptanceTests(unittest.TestCase):
                 self.assertFalse(result['registration']['accepted'])
 
     def test_factory_evidence_is_required_for_every_named_bin_in_each_scene(self):
-        helper = Path(__file__).resolve().parents[2] / 'ebots_system_artifacts/artifacts_cell_4/data_saving/bin_model/prepare_session.py'
+        helper = Path(__file__).resolve().parents[1] / 'prepare_session.py'
         spec = importlib.util.spec_from_file_location('factory_arrangement_recipe', helper)
         collection = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(collection)
@@ -171,7 +171,7 @@ class ProductionAcceptanceTests(unittest.TestCase):
                 config, program = root / 'pipeline.yaml', root / 'replay.py'
                 config.write_text('robot_id: B2\n')
                 program.write_text('unused mock')
-                recipe = data.read_yaml(helper.parent / 'recipe.yaml')
+                recipe = data.read_yaml(helper.parent / 'configs/recipe.yaml')
                 recipe.update(bin_ids=names, empty_test_rounds=1)
                 recipe['guided']['loaded_arrangements'] = 3
                 recipe['guided'].pop('resistor_capture_mode', None)
@@ -258,12 +258,12 @@ class ProductionAcceptanceTests(unittest.TestCase):
                         validate_production(root, root / 'model.json', config, root / 'bad-labels', program)
 
     def test_simultaneous_resistors_require_each_bins_own_target_registration_and_empty_evidence(self):
-        helper = Path(__file__).resolve().parents[2] / 'ebots_system_artifacts/artifacts_cell_4/data_saving/bin_model/prepare_session.py'
+        helper = Path(__file__).resolve().parents[1] / 'prepare_session.py'
         spec = importlib.util.spec_from_file_location('simultaneous_acceptance_recipe', helper)
         collection = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(collection)
         names = ['incoming.parts', 'resistors', 'rejects']
-        recipe = data.read_yaml(helper.parent / 'recipe.yaml')
+        recipe = data.read_yaml(helper.parent / 'configs/recipe.yaml')
         recipe.update(bin_ids=names, empty_test_rounds=1)
         stages = [stage for stage in collection.guided_stages(recipe) if stage['split'] == 'test']
         resistor_stages = [stage for stage in stages if 'resistor' in stage['id']]
@@ -364,12 +364,19 @@ class DeploymentTests(unittest.TestCase):
                          'bin_icp:\n  enabled: true\n  reference_mode: upper_band\n')
         self.config.write_text(self.original)
         self.models = self.root / 'installed'
+        self.state_root = self.root / 'deployment'
         self.model = {'model_name': self.report['model_name'], 'model_type': 'calibrated_bin_background'}
         self.loader = patch('deployment.model_io.load_model', return_value=self.model)
         self.loader.start()
+        def export(source, target):
+            target.mkdir(parents=True)
+            (target / 'model.json').write_text('{}')
+        self.exporter = patch('deployment.model_io.export_runtime', side_effect=export)
+        self.exporter.start()
 
     def tearDown(self):
         self.loader.stop()
+        self.exporter.stop()
         self.temporary.cleanup()
 
     def runtime(self):
@@ -382,14 +389,16 @@ class DeploymentTests(unittest.TestCase):
         replay.parent.mkdir(parents=True)
         replay.write_text(json.dumps({'model_path': '../../../model/model.json',
                                      'model_path_relative_to': 'result_file'}))
-        result = deployment.activate(self.candidate, self.models, self.config, self.runtime)
+        result = deployment.activate(self.candidate, self.models, self.config, self.runtime, state_root=self.state_root)
         self.assertTrue(result['runtime_verified'])
-        installed_replay = Path(result['model_path']).parent / 'acceptance/heldout/bin_a/result.json'
-        recorded = json.loads(installed_replay.read_text())
-        self.assertEqual((installed_replay.parent / recorded['model_path']).resolve(), Path(result['model_path']))
+        self.assertFalse((Path(result['model_path']).parent / 'acceptance').exists())
+        self.assertEqual(Path(result['acceptance']), self.report_file)
+        recorded = json.loads(replay.read_text())
+        self.assertEqual((replay.parent / recorded['model_path']).resolve(), self.candidate / 'model/model.json')
+        self.assertEqual(list(self.models.iterdir()), [Path(result['model_path']).parent])
         self.assertIn('reference_mode: measured_rim', self.config.read_text())
         self.assertIn('# Keep station comments', self.config.read_text())
-        restored = deployment.rollback(self.models, self.config, self.runtime)
+        restored = deployment.rollback(self.models, self.config, self.runtime, state_root=self.state_root)
         self.assertEqual(restored['model_path'], str(self.old_model))
         self.assertEqual(self.config.read_text(), self.original)
 
@@ -399,25 +408,25 @@ class DeploymentTests(unittest.TestCase):
             calls.append(data.read_yaml(self.config)['bin_filter_model_path'])
             return {'loaded': True, 'model_path': str(self.old_model), 'model_name': 'old'}
         with self.assertRaisesRegex(data.DatasetError, 'previous model restored'):
-            deployment.activate(self.candidate, self.models, self.config, runtime)
+            deployment.activate(self.candidate, self.models, self.config, runtime, state_root=self.state_root)
         self.assertEqual(self.config.read_text(), self.original)
         self.assertEqual(len(calls), 3)
-        self.assertFalse((self.models / 'active.json').exists())
+        self.assertFalse((self.state_root / 'active.json').exists())
 
     def test_host_install_writes_runtime_path_and_rollback_restores_runtime_identity(self):
         runtime_old = '/root/artifacts/legacy/model.yaml'
         self.original = self.original.replace(str(self.old_model), runtime_old)
         self.config.write_text(self.original)
         mapper = lambda path: Path('/root/artifacts/installed') / path.relative_to(self.models)
-        result = deployment.activate(self.candidate, self.models, self.config, self.runtime, runtime_path=mapper)
+        result = deployment.activate(self.candidate, self.models, self.config, self.runtime, runtime_path=mapper, state_root=self.state_root)
         host_path = self.models / self.report['model_name'] / 'model.json'
         self.assertEqual(result['model_path'], str(host_path))
         self.assertEqual(result['runtime_model_path'], str(mapper(host_path)))
         self.assertEqual(data.read_yaml(self.config)['bin_filter_model_path'], str(mapper(host_path)))
         self.assertTrue(host_path.is_file())
         self.assertEqual(self.config.stat().st_mode & 0o777, 0o644)
-        self.assertEqual((self.models / 'active.json').stat().st_mode & 0o777, 0o644)
-        restored = deployment.rollback(self.models, self.config, self.runtime)
+        self.assertEqual((self.state_root / 'active.json').stat().st_mode & 0o777, 0o644)
+        restored = deployment.rollback(self.models, self.config, self.runtime, state_root=self.state_root)
         self.assertEqual(restored['runtime_model_path'], runtime_old)
         self.assertEqual(self.config.read_text(), self.original)
 
@@ -426,7 +435,7 @@ class DeploymentTests(unittest.TestCase):
                         {'pipeline': 'python_filter'}, {'results': []}, {'status': 'failed'}):
             self.report_file.write_text(json.dumps(self.report | changes))
             with self.assertRaises(data.DatasetError):
-                deployment.activate(self.candidate, self.models, self.config, self.runtime)
+                deployment.activate(self.candidate, self.models, self.config, self.runtime, state_root=self.state_root)
             self.assertEqual(self.config.read_text(), self.original)
 
     def test_activation_failure_does_not_claim_restore_without_correct_identity(self):
@@ -437,23 +446,23 @@ class DeploymentTests(unittest.TestCase):
                 return self.runtime()
             return {'loaded': True, 'model_path': '/wrong/model.json', 'model_name': 'wrong'}
         with self.assertRaisesRegex(data.DatasetError, 'runtime rollback failed'):
-            deployment.activate(self.candidate, self.models, self.config, wrong_runtime)
+            deployment.activate(self.candidate, self.models, self.config, wrong_runtime, state_root=self.state_root)
         self.assertEqual(self.config.read_text(), self.original)
-        self.assertFalse((self.models / 'active.json').exists())
+        self.assertFalse((self.state_root / 'active.json').exists())
         # Preserve the failed package at its original path when runtime rollback
         # was not verified: Perception might still be using that directory.
         self.assertTrue((self.models / self.report['model_name']).is_dir())
-        self.assertFalse((self.models / 'failed_installations').exists())
+        self.assertFalse((self.state_root / 'failed_installations').exists())
 
     def test_unavailable_preflight_does_not_publish_install_and_same_candidate_can_retry(self):
         def unavailable():
             raise data.DatasetError('Perception reload service is unavailable')
         with self.assertRaisesRegex(data.DatasetError, 'unavailable'):
-            deployment.activate(self.candidate, self.models, self.config, unavailable)
+            deployment.activate(self.candidate, self.models, self.config, unavailable, state_root=self.state_root)
         self.assertEqual(self.config.read_text(), self.original)
         self.assertFalse((self.models / self.report['model_name']).exists())
-        self.assertFalse((self.models / 'active.json').exists())
-        result = deployment.activate(self.candidate, self.models, self.config, self.runtime)
+        self.assertFalse((self.state_root / 'active.json').exists())
+        result = deployment.activate(self.candidate, self.models, self.config, self.runtime, state_root=self.state_root)
         self.assertTrue(result['runtime_verified'])
 
     def test_verified_rollback_archives_failed_install_and_same_candidate_can_retry(self):
@@ -461,20 +470,21 @@ class DeploymentTests(unittest.TestCase):
             return {'loaded': True, 'model_path': str(self.old_model), 'model_name': 'old'}
         for attempt in (1, 2):
             with self.subTest(attempt=attempt), self.assertRaisesRegex(data.DatasetError, 'previous model restored'):
-                deployment.activate(self.candidate, self.models, self.config, old_runtime)
+                deployment.activate(self.candidate, self.models, self.config, old_runtime, state_root=self.state_root)
             self.assertEqual(self.config.read_text(), self.original)
             self.assertFalse((self.models / self.report['model_name']).exists())
-            archive = self.models / 'failed_installations' / self.report['model_name'] / f'attempt-{attempt:02d}'
+            archive = self.state_root / 'failed_installations' / self.report['model_name'] / f'attempt-{attempt:02d}'
             self.assertTrue((archive / 'model.json').is_file())
-            self.assertEqual((archive / 'acceptance/acceptance.json').read_bytes(), self.report_file.read_bytes())
-        result = deployment.activate(self.candidate, self.models, self.config, self.runtime)
+            self.assertEqual(json.loads((archive / 'failure.json').read_text())['acceptance'], str(self.report_file))
+            self.assertFalse((archive / 'acceptance').exists())
+        result = deployment.activate(self.candidate, self.models, self.config, self.runtime, state_root=self.state_root)
         self.assertTrue(result['runtime_verified'])
-        self.assertEqual(len(list((self.models / 'failed_installations' / self.report['model_name']).iterdir())), 2)
+        self.assertEqual(len(list((self.state_root / 'failed_installations' / self.report['model_name']).iterdir())), 2)
 
     def test_parallel_installations_are_rejected(self):
-        with deployment.deployment_lock(self.models):
+        with deployment.deployment_lock(self.state_root):
             with self.assertRaisesRegex(data.DatasetError, 'in progress'):
-                deployment.activate(self.candidate, self.models, self.config, self.runtime)
+                deployment.activate(self.candidate, self.models, self.config, self.runtime, state_root=self.state_root)
 
 
 if __name__ == '__main__':

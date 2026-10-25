@@ -20,11 +20,7 @@ class WorkerOperationsTests(unittest.TestCase):
         if not source.is_dir():
             self.skipTest('Cell 4 collection helper is not checked out')
         self.artifacts = self.root / 'artifacts'
-        for name in ('prepare_session.py', 'recipe.yaml', 'bin_config.yaml'):
-            destination = self.artifacts / 'data_saving/bin_model' / name
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source / 'data_saving/bin_model' / name, destination)
-        recipe = data.read_yaml(self.artifacts / 'data_saving/bin_model/recipe.yaml')
+        recipe = data.read_yaml(Path(__file__).resolve().parents[1] / 'configs/recipe.yaml')
         for key in ('camera_calibration', 'robot_calibration'):
             destination = self.artifacts / recipe[key]
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -132,7 +128,7 @@ class WorkerOperationsTests(unittest.TestCase):
                                              lambda _: None, reload_runtime)
         self.assertTrue(result['runtime_verified'])
         activate.assert_called_once_with(candidate, self.root / 'models', self.root / 'pipeline.yaml',
-                                         reload_runtime, runtime_path=mapper)
+                                         reload_runtime, state_root=self.root / 'sessions/deployment', runtime_path=mapper)
 
     def test_quick_check_resolves_configured_runtime_model_to_host_before_validation(self):
         runtime_model = Path('/root/artifacts/models/current/model.json')
@@ -184,7 +180,9 @@ class WorkerOperationsTests(unittest.TestCase):
         prepared = self.execute('prepare', name='rebuild')
         folder = Path(prepared['session_path'])
         self.operations.collection.verify_session = lambda _: None
+        commands = []
         def build(arguments, progress):
+            commands.append(arguments)
             candidate = Path(arguments[arguments.index('--output') + 1])
             name = arguments[arguments.index('--model-name') + 1]
             (candidate / 'production_validation').mkdir(parents=True)
@@ -198,6 +196,88 @@ class WorkerOperationsTests(unittest.TestCase):
         self.assertEqual((folder / 'candidate/production_validation/acceptance.json').read_bytes(), original)
         self.assertEqual(self.operations.candidate(folder), Path(second['candidate_path']))
         self.assertEqual(self.execute('review', session_path=str(folder))['acceptance'], second['acceptance'])
+        self.assertTrue(all('--cad-reference' not in arguments for arguments in commands))
+
+    def cad_reference(self, session):
+        relative = 'data_saving/bin_model/cad_references/curved-bin.yaml'
+        plan = self.artifacts / relative
+        plan.parent.mkdir(parents=True, exist_ok=True)
+        (plan.parent / 'curved-bin.stl').write_text('test mesh')
+        data.write_yaml(plan, {'name': 'Curved bin reference', 'scene_id': session['scene_id'],
+            'frame_id': session['frame_id'], 'bins': {bin_id: {
+                'mesh_path': 'curved-bin.stl', 'scale_to_mm': 1.,
+                'bin_from_cad': [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+            } for bin_id in session['bin_ids']}})
+        return relative
+
+    def test_cad_build_passes_selected_reference_without_mutating_saved_session(self):
+        prepared = self.execute('prepare', name='cad-build')
+        folder = Path(prepared['session_path'])
+        relative = self.cad_reference(prepared['session'])
+        self.operations.collection.verify_session = Mock()
+        original = {path: path.read_bytes() for path in folder.rglob('*') if path.is_file()}
+        commands = []
+        def build(arguments, progress):
+            commands.append(arguments)
+            candidate = Path(arguments[arguments.index('--output') + 1])
+            (candidate / 'production_validation').mkdir(parents=True)
+            (candidate / 'production_validation/acceptance.json').write_text('{"status":"passed"}')
+        self.operations.run_cli = build
+        first = self.execute('build', session_path=str(folder), cad_reference='')
+        old_report = Path(first['candidate_path']) / 'production_validation/acceptance.json'
+        old_bytes = old_report.read_bytes()
+        # Pending New setup fields have no bearing on the open session's build.
+        second = self.execute('build', session_path=str(folder), cad_reference=relative,
+                              scene_id=4, frame_id='unrelated', bin_ids=['other'])
+        self.assertNotIn('--cad-reference', commands[0])
+        self.assertEqual(commands[1][commands[1].index('--cad-reference') + 1], self.artifacts / relative)
+        self.assertTrue(second['candidate_path'].endswith('candidate-02'))
+        self.assertEqual(old_report.read_bytes(), old_bytes)
+        self.assertEqual({path: path.read_bytes() for path in original}, original)
+
+    def test_build_rejects_cad_for_wrong_scene_frame_or_missing_bins_before_spawning(self):
+        prepared = self.execute('prepare', name='cad-rejection')
+        folder = Path(prepared['session_path'])
+        relative = self.cad_reference(prepared['session'])
+        plan = self.artifacts / relative
+        original = data.read_yaml(plan)
+        self.operations.run_cli = Mock(side_effect=AssertionError('Invalid CAD must not start a build'))
+        for changes in ({'scene_id': 4}, {'frame_id': 'other'}, {'bins': {'bin_a': original['bins']['bin_a']}}):
+            data.write_yaml(plan, dict(original, **changes))
+            with self.subTest(changes=changes), self.assertRaisesRegex(data.DatasetError, 'open session'):
+                self.execute('build', session_path=str(folder), cad_reference=relative)
+        self.operations.run_cli.assert_not_called()
+        self.assertFalse((folder / 'candidate').exists())
+
+    def test_uploaded_reference_build_is_resolved_from_the_open_session(self):
+        prepared = self.execute('prepare', name='uploaded-cad-build')
+        folder = Path(prepared['session_path'])
+        self.operations.collection.verify_session = Mock()
+        plan = folder / 'cad_previews/preview-01/plan.yaml'
+        calls = []
+        def build(arguments, progress):
+            calls.append(arguments)
+            candidate = Path(arguments[arguments.index('--output') + 1])
+            (candidate / 'production_validation').mkdir(parents=True)
+            (candidate / 'production_validation/acceptance.json').write_text('{}')
+        self.operations.run_cli = build
+        with patch('setup_operations.cad_upload.selected_plan', return_value=plan) as selected:
+            self.execute('build', session_path=str(folder), cad_reference='session:cad_previews/preview-01/plan.yaml')
+        selected.assert_called_once_with(folder, 'session:cad_previews/preview-01/plan.yaml', prepared['session'])
+        self.assertEqual(calls[0][calls[0].index('--cad-reference') + 1], plan)
+
+    def test_cad_preview_reuses_training_baseline_without_decoding_capture_images(self):
+        prepared = self.execute('prepare', name='cad-preview-cache')
+        folder = Path(prepared['session_path'])
+        self.operations.collection.verify_session = Mock()
+        self.operations.run_cli = Mock(side_effect=AssertionError('Cached preview must not start fitting'))
+        baseline, selections = {'model_name': 'empty-baseline'}, {'bin_a': {}, 'bin_b': {}}
+        with patch('setup_operations.cad_upload.matching_baseline', return_value=baseline), \
+                patch('setup_operations.cad_upload.preview', return_value={'cad_preview': {}}) as preview:
+            self.execute('cad_preview', session_path=str(folder), selections=selections)
+        self.operations.collection.verify_session.assert_called_once_with(folder, decode_images=False)
+        self.operations.run_cli.assert_not_called()
+        self.assertEqual(preview.call_args.args[:4], (folder, prepared['session'], baseline, selections))
 
     def test_quick_check_can_retry_after_replay_startup_failure(self):
         prepared = self.execute('prepare', quick=True)

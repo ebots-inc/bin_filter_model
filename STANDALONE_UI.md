@@ -1,453 +1,297 @@
-# Standalone Bin Setup
+# Bin Setup: operator guide
 
-Run `bin_setup.py` on the local PC and open **http://localhost:8765**. The UI
-collects data through the existing camera and Eyes services, fits a candidate,
-and validates saved captures. Collection does not need a running Perception
-node, Brain, HMI or robot sequence. The application never moves the robot.
+Use this guide to collect empty-bin and part captures, build a model, check it,
+and put a passing model into service. Bin Setup runs in a browser on the station
+PC. Collection needs the camera and Eyes services. The app never moves the robot.
 
-## Station installation
+**First time on this station?** Have the integrator complete
+[station installation](STATION_SETUP.md#station-installation) and confirm the
+scene, bin names and diagram directions. After that, follow the steps below.
 
-From the repository root:
+## 1. Open Bin Setup
 
-```bash
-python3 -m venv bin_filter_offline/.venv
-bin_filter_offline/.venv/bin/python -m pip install -r bin_filter_offline/requirements.txt
-bin_filter_offline/.venv/bin/python bin_filter_offline/install_tools.py \
-  --artifacts-root ebots_system_artifacts/<YOUR_ARTIFACTS_CELL: e.g.artifacts_cell_4>
-bash bin_filter_offline/native/build.sh <YOUR_CAMERA_CONTAINER: e.g. eyes_container>
-```
+1. Stop production and park the arm clear of the camera view using the normal
+   station procedure. Leave the camera and Eyes services running.
+2. Open a terminal at the workspace root and run:
 
-Replace `YOUR_CAMERA_CONTAINER` with the actual running Eyes container name.
-The build installs the native helper at
-`/root/artifacts/data_saving/bin_model/tools/native/bin_capture` inside that
-container. It builds the camera transport and Float32 EXR writer without building
-or starting Perception. Refreshing staged Python tools preserves `tools/native`
-and keeps the previous Python copy in `tools.previous`.
+   ```bash
+   bin_filter_offline/.venv/bin/python bin_filter_offline/bin_setup.py
+   ```
 
-Camera buffers use CUDA shared memory, but the capture helper copies those
-buffers directly to CPU memory for EXR saving. The Eyes container's Open3D library
-can be CPU-only; its CUDA module is not required for collection. The camera/Eyes
-environment still needs its normal GPU access.
+3. Leave that terminal open. In a browser on the same PC, open
+   **http://localhost:8765**. The page also has a **Step-by-step guide** link
+   for keeping these instructions beside the app.
+4. If you are continuing a collection, select its name and click **Open session**.
+   Continue with its first unfinished instruction; do not create another session.
 
-Start the server as your normal user:
+A browser refresh does not stop collection. The terminal runs the application.
+If the page is already open from an earlier server, refresh it after restarting
+the server to load the current UI.
 
-```bash
-bin_filter_offline/.venv/bin/python bin_filter_offline/bin_setup.py
-```
+## 2. Select the scene and bins
 
-The default `--camera-container auto` discovers a running container by its
-artifacts bind mount and installed Eyes tools. **Container names are unrestricted.**
-If multiple containers match, use `--camera-container YOUR_CAMERA_CONTAINER`.
-`--capture-executable` overrides the helper's absolute path inside that container.
+For a new collection:
 
-The server binds to loopback and defaults to this checkout's
-`ebots_system_artifacts/artifacts_cell_4` and `data/bin_model`. Override these with
-`--artifacts-root` and `--data-root`. `--recipe /path/to/recipe.yaml` selects other
-acquisition defaults. Host Python needs neither ROS nor CUDA. It invokes the
-native client through Docker and maps paths using the actual bind mounts.
-Capture output is transferred to the host session with the host user's ownership;
-Eyes' `/root/data` mount can differ from the host data directory.
+1. Select the **Scene**, its camera calibration and reference frame. Choose an
+   existing **Bin layout**, or create one from a picture using the steps below.
+   Scene 0 is not a universal default for every station.
+2. Check every bin you want to collect. One capture records all selected bins
+   together; you do not need a separate collection for each bin.
+3. Give the session a readable name, such as `fremont-resistors-oct25`.
+   If you leave the name blank, the app supplies a readable name.
+4. Leave exposures at **4, 8, 12, 16, 20 ms**, unless this station's recipe calls
+   for other values. Each value applies to both spotlight and structured light
+   on both cameras.
+5. Click **New setup**.
 
-## Scene, bins and existing calibration
+The sidebar selections prepare a **new** session. An opened session keeps its
+saved scene, bins and exposure plan. If a required camera calibration or reference
+frame is missing, ask the integrator to configure it; changing the scene number
+does not calibrate the station.
 
-Select **scene 0, 1, 2, 3 or 4** in the UI; additional configured scene IDs also
-appear. A session collects one scene and any nonempty selection of its bins.
-The two Denali sensors form a stereo pair; they do not limit the physical bin
-count. One, two, three or more bins are supported.
+### First layout, or bins moved? Mark them on a picture
 
-The shared Eyes workflow is:
+You do **not** need to know coordinates, bin height or rim height. The app derives
+these from the calibrated empty-bin depth capture.
 
-```text
-artifacts/workflow_configs/bin_calibration.yaml
-```
+1. Select the station's **Scene**, **Camera calibration** and **Reference frame**.
+2. Click **Create bin layout**. Empty every bin and leave it mounted in its usual
+   position. Keep the arm outside the camera view.
+3. Tick **Every bin is empty, mounted in its usual position, and clear of the
+   arm**. Click **Check selected scene**, and wait for **Cameras ready**.
+4. Click **Capture empty scene**. This makes a separate layout preview; it does
+   not begin or change your training collection.
+5. On the picture, drag a box **just outside the complete outer edge** of the
+   first bin. Include the **entire flat top rim on all four sides**, leaving
+   neighbouring bins outside. You do not need to trace the exact curved bowl edge.
+6. Replace `bin_1` with a useful name, such as `left` or `resistors`. Start with a letter,
+   then use letters, numbers, underscores or hyphens (up to 64 characters).
+   Names must be different for every bin.
+7. Click **Add another bin** and draw its box. Repeat for every bin you want in
+   this layout. **Draw again** replaces a box; **Remove** deletes it.
+8. Click **Find bowl and top rim**. In the review picture, check that cyan follows
+   the measured bowl interior and orange follows its flat upper rim. Check the
+   names and displayed dimensions for every bin. Compare with the original
+   picture: a box can pass the checks while cutting off some of the rim. If it
+   includes a neighbour or misses any outer rim, redraw and run this step again.
+9. Enter a readable **Layout name**, such as `Resistor station — two bins`. Tick
+   **I checked every bin’s bowl and top rim**, then click **Save and select layout**.
+10. Return to the sidebar. Your new layout is selected. Check the bins, name your
+    collection, and click **New setup**.
 
-Its scene entries reference the existing camera calibration files under:
+![Draw a box around each complete bin, review the measured bowl and rim, then save a named layout.](docs/layout-setup.svg)
 
-```text
-artifacts/calibration/deployment/camera/
-```
+The picture is a top-down depth view: +X points right and +Y points up in the
+selected reference frame. It can look rotated compared with the camera image or
+your position at the station. Saved layouts live under `data/bin_model/layouts/`;
+the app writes the fitting settings for you. Existing sessions keep their own
+saved layout. Create a new session to collect with a changed layout.
 
-For example, this is a scene-0 entry in the workflow:
+If the app cannot find a usable bowl and rim, check that the bins are empty and
+fully visible, then correct the boxes or take a new empty view. A failed layout
+review is not saved as a usable layout. The full training and validation steps
+still run after layout creation.
 
-```yaml
-ros_vis: false
-scenes:
-  - scene_id: 0
-    name: bin_model_capture
-    ros_action: pose
-    camera:
-      - cam_id: 0
-        parameters:
-          - artifacts/calibration/deployment/camera/scene0_denali0_params.yaml
-```
+## 3. Check the cameras and take a preview
 
-Add the station's actual scene entries and their existing calibration paths to
-this shared workflow when commissioning another scene. Eyes expects these paths
-relative to `EBOTS_ROOT`; do not prepend `/root/` to its `parameters` entries.
-Creating a session reads this workflow and checks the selected scene/calibration.
-It does not generate another Eyes workflow or calibration setup file. Older
-sessions and their recorded files remain readable.
+1. Click **Check connection**. Wait for **Cameras ready**.
+2. Remove all parts from all selected bins. Leave the bins in their normal
+   mounted positions.
+3. Click **Preview cameras**.
+4. Check that the expected bins appear in the preview and the arm is out of view.
+   If the bins or orientation look wrong, resolve that before collecting.
 
-The reference-frame selector reads existing files from
-`artifacts/calibration/deployment/robot/` with a hand-eye entry for the selected
-scene. The fixed camera-to-frame transform is needed; the current arm pose is not.
+Preview images are separate from the training and validation captures. When
+connection readiness fails, expand **Connection details**, fix the listed
+problem, and click **Check connection** again. Collection buttons remain disabled
+until the connection is ready.
 
-An integrator defines each measured bin layout under
-`artifacts/data_saving/bin_model/layouts/`. A layout contains `scene_id`,
-`frame_id`, an optional readable `name`, and a `bins` mapping with one entry per
-bin. Use `data_saving/bin_model/bin_config.yaml` as the fitting-settings example.
-Set the actual bounds, interior-floor seed, height range and top-rim band in the
-chosen frame. Names such as `resistors`, `left` and `right` are supported.
-Do not copy another scene's coordinates without measuring them. The UI offers
-matching layouts and lets the operator select all or a subset of their bins.
+## 4. Capture the empty bins
 
-The checked-in default is the measured scene-0/B2 layout. Other scenes need their
-commissioned camera calibration, hand-eye transform, Eyes workflow entry and
-measured layout in the artifacts tree. Changing the scene selector does not
-create these measurements. The sidebar selections apply to the next new setup;
-an opened session retains its recorded scene, bins and capture plan.
+1. Read the main stage instruction. Confirm **every selected bin is completely
+   empty**.
+2. Click **Scene ready — capture exposures** once.
+3. Keep the bins unchanged while the app captures the empty training stage.
+4. When the app asks for fresh empty validation, check the bins are still empty
+   and click **Scene ready — capture exposures** again.
 
-## Camera connection
+With the default recipe, empty training has **35 captures** and fresh empty
+validation has **15 captures**. The repeated empty captures run automatically.
+The app pauses before asking you to put parts in the bins.
 
-Keep production stopped while collecting so another workflow does not change
-settings or compete for captures. Park the arm clear of the camera view.
+## 5. Capture one resistor in every bin
 
-If needed, start the existing camera node in the Eyes environment using the
-station's workcell manifest:
+![One Ready click captures all exposures, then the app waits for the next arrangement.](docs/capture-cycle.svg)
 
-```bash
-ros2 run ebots_cameras ebots_cameras --ros-args -p mode:=hardware
-```
+For each loaded stage:
 
-Start Eyes with the shared workflow, in another terminal in that environment:
+1. Read the **location** and **arrangement number** in the current instruction.
+2. Put **exactly one resistor in each selected bin**, in that named area.
+   For example, a left-side stage means one resistor toward the left side of
+   every selected bin.
+3. Click **Scene ready — capture exposures** once.
+4. Leave the resistors still until the entire sweep finishes: **4 → 8 → 12 →
+   16 → 20 ms** with the default settings.
+5. When the next arrangement appears, rotate or move **each bin's resistor**
+   within the requested area. Click Ready again only after all bins are prepared.
 
-```bash
-ros2 run ebots_eyes ebots_eyes \
-  -cfg /root/artifacts/workflow_configs/bin_calibration.yaml \
-  --ros-args -p mode:=hardware
-```
+**Do not move parts between exposures in one sweep. Do move or rotate them
+between arrangements.** An arrangement showing `0/5` requires one Ready click.
+`5/5` means that arrangement's sweep is complete.
 
-An existing Eyes process configured for the same scenes and calibration can be
-used. Do not start a second Eyes server for the same scene. If calibration or
-workflow entries change, reload Eyes with the matching shared workflow before
-collection. The app does not start or restart station services.
+![Schematic resistor areas: center, left, right, bottom, top and bottom-left diagonal.](docs/resistor-placements.svg)
 
-The UI checks readiness at startup and after opening/preparing a session.
-**Check connection** refreshes the result. It checks the session's scene, or the
-selected scene when no session is open. Missing camera status, stereo sensors,
-acquisition service and `/eyes_depthN` for scene N are listed separately.
-Preview and Scene ready stay disabled until readiness passes, and check again
-before acquisition. A failed check preserves captures and scene confirmations.
-Service-name discovery alone is not sufficient: a server must be available.
+The default guide visits **center, left, right, bottom, top and bottom-left
+diagonal**, with three arrangements at each location. The amber area gives a
+broad direction; the resistor drawing is an example, not an exact spot. On a
+curved bowl, place the resistor naturally on the lower bowl, off the flat rim
+and steep wall. There is no required distance from the wall and no physical
+corner to find.
 
-**Preview cameras** captures a fresh pair outside the training/validation plan.
-Raw camera images alone are insufficient; Eyes supplies reconstructed depth.
-Logs are saved with failed requests. Requested settings and calibration copies
-are evidence, not independent sensor-register or live Eyes calibration readback.
-Keep deployment calibration unchanged throughout a session. Capture evidence is
-checked against it during verification. Capture and model calibration snapshots
-are retained for reproducibility, not additional setup files to maintain.
+**Use the directions shown for this station.** Left/right/top/bottom refer to
+bin-local −X/+X/+Y/−Y. They can differ from the camera image or your view while
+standing at the machine. Have the integrator identify these directions once;
+keep that convention throughout collection.
 
-## Operator workflow
+## 6. Capture normal and full bins
 
-1. Select the scene, camera calibration, reference frame, measured layout and bins.
-   Enter an optional readable session name and sorted exposures from 4–20 ms.
-   Defaults are **4, 8, 12, 16, 20 ms**; additional measured anchors can be entered.
-   Each value sets both spotlight and structured-light exposures on both cameras:
-   a 4 ms step uses 4 ms for both, an 8 ms step uses 8 ms for both, and so on.
-   Click **New setup**. Existing names are refused.
-2. Follow the stage instructions and diagram. **Scene ready — capture exposures**
-   records your confirmation and captures that arrangement at every selected
-   exposure. Leave every selected bin unchanged during the sweep, so exposure
-   comparisons use the same part positions. The app stops before the next
-   arrangement and waits for another Ready click.
-3. Empty training and fresh empty validation come first. Then place **exactly
-   one resistor in each selected bin**, collecting all bins together at the same
-   named location: near center, toward **each of the four sides**, then the
-   bottom-left diagonal.
-   Each location has **three arrangements**: after each sweep, rotate or
-   reposition every bin's resistor within its indicated region before clicking
-   Ready again. Keep exactly one resistor in each bin. Finally collect three normal-fill
-   and three full-fill arrangements in all selected bins. Rearrange the parts
-   between sweeps while keeping roughly the same fill amount; use your usual
-   production amounts, with no exact count needed. Empty stages retain their
-   automatic repetitions and do not ask for rearrangement.
-4. **Build and validate** fits empty training data, then evaluates held-out empty,
-   resistor and filled captures through geometry checks and production replay.
-   Review failures by capture, bin and exposure. Rebuilding preserves earlier
-   candidates and writes `candidate-02`, `candidate-03`, and so on.
-5. **Use this model** requires passed physical evidence and an available
-   Perception Summit reload service. It installs the bundle, verifies the loaded
-   identity and restores the previous configuration if activation fails. The
-   configured pipeline must match the model's scene and reference frame. Use
-   `--pipeline-config` and `--models-root` for another deployment target.
+1. At **normal fill**, put a typical working amount of production parts in all
+   selected bins. Spread them naturally, leaving some bin surface visible.
+2. Click Ready and keep the parts still for the sweep.
+3. Between the three normal-fill arrangements, mix or reposition the parts,
+   keeping roughly the same amount.
+4. At **full fill**, use a representative full production load within the
+   station's normal fill limit. Repeat three arrangements, changing the parts'
+   positions and overlaps between sweeps.
 
-With the default five exposures, the guide has **170 captures and 26 Ready
-confirmations** for any number of selected bins. All selected bins share each
-capture. Each loaded
-arrangement shows **0/5** in the sidebar and needs a separate Ready click.
-The three arrangements still total 15 captures per resistor location or fill
-condition. Only empty training captures fit the model. Fresh empty validation
-checks each selected bin while all are empty; loaded validation evaluates every
-bin's expected contents separately within the shared captures. For resistor
-stages, production validation requires a target near the center or in the
-instructed broad direction, inside the reliable measured bowl footprint.
-Validation does not establish an exact resistor footprint, precise part
-localization, grasp success, unmeasured exposure settings or arbitrary ambient
-lighting.
+No exact normal/full part count is required. Follow the current stage instruction
+for every bin. With five exposures, the complete default collection has:
 
-These counts apply to newly prepared sessions with the default three loaded
-arrangements, four walls, and simultaneous resistor placement in all selected
-bins. The diagram labels **Left (−X), Right (+X), Bottom (−Y), and Top (+Y)**
-in the bin's local coordinate system. Gold marks the selected side and amber
-shows approximate directional guidance on a rounded bowl. Place the resistor
-naturally on the lower bowl in that direction, off the rim and steep wall. There
-is no required distance from the wall. The icon is an example position; neither
-it nor the shading is a measured target boundary. Camera images may use a
-different orientation. Historical `corner` stages mean the bottom-left
-(−X, −Y) diagonal, since this curved bowl has no physical corner.
+| Stage | What you prepare | Captures | Ready clicks |
+| --- | --- | ---: | ---: |
+| Empty training | All bins empty | 35 | 1 |
+| Empty validation | All bins still empty | 15 | 1 |
+| One resistor | Six areas × three arrangements, in all bins | 90 | 18 |
+| Normal fill | Three different arrangements, in all bins | 15 | 3 |
+| Full fill | Three different arrangements, in all bins | 15 | 3 |
+| **Total** | **Any number of selected bins** | **170** | **26** |
 
-The supplied wok-style CAD is approximately **190 × 190 × 80 mm**, with a
-continuously curved interior and top rim. It explains the shape shown by the
-schematic. The background model remains fitted to empty training captures;
-CAD does not supply the camera calibration, placed-bin transform or robot pose.
-The saved stage and capture IDs remain unchanged.
+Counts change if the station uses a different recipe or exposure list. Older
+saved sessions retain their original instructions and counts; follow the opened
+session rather than assuming this table applies to it.
 
-The acceptance report records `placement_evidence: operator_confirmed_directional`.
-The operator's Ready confirmation establishes the instructed contents; the
-replay checks approximate center or broad direction inside the measured bowl.
-Left/right/top/bottom use the named side and dominant axis from the bin's
-configured interior seed; the diagonal uses negative X and negative Y. These
-checks do not claim that the target coincides with an independently annotated
-resistor footprint. That stronger localization claim needs separate evidence.
+## 7. Add CAD if you have it
 
-Existing saved sessions retain their recorded plan. Older sequential sessions
-still ask for one loaded bin and the other bins empty; follow their current
-instructions and diagrams. An older loaded stage showing **0/15** runs all three
-exposure sweeps after one Ready click. An older wall stage without a side label
-uses the left (−X) wall. Its recorded images are not relabeled as simultaneous
-captures, different arrangements, or other wall sides.
+CAD is optional. To build from real captures alone, leave **Geometry reference
+for this build** at **Measured captures only** and go to step 8.
 
-## Production replay installation
+For a completed collection with a CAD reference:
 
-Collection needs no Perception container. **Build and validate** additionally
-needs the matching standalone `summit_replay` executable. Build it in the normal
-Perception build environment:
+1. Choose the bin's **STL** file. Use the part's actual nominal design,
+   including its flat top rim.
+2. Choose whether that design applies to all selected bins or one bin, then
+   click **Upload CAD**. Different bin shapes need their own files.
+3. For each bin, select the file's **units**, the axis that points **up**, and its
+   **yaw**. STL does not record units. Ask the CAD author or integrator if these
+   are unknown; a millimetre/inch mix-up cannot be fixed by fitting.
+4. Click **Preview CAD placement**. The app places the reference using saved
+   **empty training** geometry, keeping scale fixed.
+5. Review the top view and both cross-sections: **blue is measured geometry;
+   orange is CAD**. Confirm that the bowl opens upward, size is correct, and the
+   rim and interior line up. If the wrong side faces up or the shape is wrong,
+   correct the choices and preview again.
+6. After checking every selected bin, tick **I checked the bin size and
+   orientation in every preview**, then click **Confirm CAD reference**.
+7. Select the confirmed reference under **Geometry reference for this build**
+   before clicking **Build and validate**.
 
-```bash
-cd /root/perception/workspace
-source /opt/ros/humble/setup.bash
-colcon build --packages-up-to perception_node
-source install/setup.bash
-```
+Previously commissioned references matching this session can also appear in
+that selector. CAD selection applies to the open session, not the sidebar's
+settings for a future session.
 
-The host discovers the matching container when replay is requested. Override with
-`--replay-container YOUR_REPLAY_CONTAINER` or `--replay-executable` if needed.
-The default executable is
-`/root/perception/workspace/install/perception_node/lib/perception_node/summit_replay`.
-It processes saved files without starting a Perception node. Model, capture,
-calibration and output paths must be visible through that container's bind
-mounts. Keep the executable and model-loading libraries from the same build.
+The measurements still supply the physical surface and top-rim registration
+points, including printing or machining differences. CAD guides which measured
+surface belongs to the bin; it does not fill unseen areas or raise the part
+removal threshold. A CAD-assisted candidate must pass the same held-out checks.
 
-## GPU processing and replay timing
+## 8. Build and read the result
 
-After rebuilding Perception, the calibrated bin pipeline defaults to GPU camera
-correction/background classification and a reduced input for measured-rim
-registration. These optional settings belong at the top level of
-`config/pose_estimation/contour_summit_pose_params.yaml`:
+1. Once every stage is complete, click **Build and validate**.
+2. Leave the server terminal running. Follow **Activity** for progress. Building
+   and replaying the whole dataset is an offline operation; it is separate from
+   the time required for one production pose request.
+3. Wait for the final result. You can use **Review saved results** to reopen it.
+4. If checks fail, review the named capture, bin and exposure. Correct the
+   identified problem before deployment. A finished build is not automatically
+   a passed validation.
+5. When physical production validation passes, **Use this model** becomes
+   available. Building alone does not change the model used by production.
 
-```yaml
-use_gpu_bin_filter: true
-use_reduced_registration_input: true
-```
+The fit uses empty training captures. Fresh empty, resistor and filled captures
+are held out for validation. A resistor check verifies a target in the instructed
+broad area; it does not establish the exact resistor footprint or grasp accuracy.
+Each build creates a new candidate, preserving earlier candidates and captures.
 
-Camera profile arrays remain on the GPU between requests. Correction and
-classification preserve the CPU model's exposure, gain, black-level, uncertainty,
-and unknown-cell checks. These bin-filter steps avoid downloading the full
-cloud; registration transfers a selected subset to the CPU. Its selection retains
-a conservative neighborhood of the measured lip and boundary, including the
-alignment search margin. Full-resolution foreground classification
-still uses the corrected scene cloud. Registration changes model lookup
-coordinates, not the returned scene points. CPU input and legacy models retain
-their existing CPU filtering path. Setting either option to `false` provides
-the previous path for comparison. Reload the workflow or restart Perception after
-changing pipeline settings.
+## 9. Activate and run the HMI contour test
 
-Use the native `summit_replay` executable **inside the Perception container** to
-measure saved-depth processing. No running camera, Eyes, or Perception node is
-needed. First set `model_bundle` and `capture_dir` to the actual completed model
-and saved capture directories visible in that container. The following example
-uses a scene-0 `bin_a` capture at 8 ms; adjust the scene, bin, exposure, gain, and
-black level to the capture's metadata:
+This example is for **cell 4, scene 0/B2, bin_a and bin_b**. Another scene or bin
+layout needs its matching commissioned HMI workflow.
 
-```bash
-source /opt/ros/humble/setup.bash
-source /root/perception/workspace/install/setup.bash
+1. Finish collection. Start the station's normal camera, Eyes, updated Perception,
+   Brain and HMI services using the normal station procedure.
+2. In HMI, select **Celestica Contour Map Test**, click **Launch**, and wait for
+   the nodes to become ready. Leave it ready to **Run**; do not start a pose
+   request during activation.
+3. In Bin Setup, click **Use this model**. Wait for successful activation. The
+   app updates the model path and verifies which model Perception loaded.
+4. Put parts in both bins, then click **Run** in HMI. This test requests a pose
+   from bin_a and then bin_b; it does not move the robot.
 
-model_bundle=/absolute/path/to/candidate/model
-capture_dir=/absolute/path/to/completed/capture
-replay=/root/perception/workspace/install/perception_node/lib/perception_node/summit_replay
+An empty bin returns no pose, so both bins need parts for this two-bin test to
+succeed. If activation reports a missing reload service, ask the integrator to
+start the updated Perception build and load the matching workflow. Do not treat
+that error as successful activation. See the
+[detailed HMI setup](STATION_SETUP.md#activate-and-run-the-hmi-contour-test) for
+configuration paths, camera settings, RViz and restarting cached settings.
 
-replay_inputs=(
-  --model "$model_bundle"
-  --camera-calibration "$capture_dir/calibration/camera.yaml"
-  --robot-calibration "$capture_dir/calibration/robot.yaml"
-  --config /root/artifacts/config/pose_estimation/contour_summit_pose_params.yaml
-  --depth0 "$capture_dir/depth/Frame0.exr"
-  --depth1 "$capture_dir/depth/Frame1.exr"
-  --scene-id 0 --bin bin_a
-  --exposure-ms 8,8 --gain 0,0 --black-level 240,240
-  --device CUDA:0 --warmup 2 --repeat 20
-)
+**Restore previous model** restores the recorded previous deployment when one
+is available. Activation failures restore the earlier pipeline configuration.
 
-"$replay" "${replay_inputs[@]}" --gpu-filter on --registration-input reduced \
-  --output /tmp/bin-replay-optimized.json
-"$replay" "${replay_inputs[@]}" --gpu-filter off --registration-input full \
-  --output /tmp/bin-replay-baseline.json
-```
+## Where your files go
 
-Both runs use the same saved capture and selected GPU. The baseline keeps the
-existing CPU camera correction/classification and full registration input while
-the rest of the pipeline runs on the same device. A pure CPU run uses
-`--device CPU:0`. The host `host_replay.py` validation adapter does not currently
-forward these benchmark options; run the native executable directly as above.
-Capture calibration snapshots reproduce the saved measurement; live operation
-continues to use the deployment calibration under the artifacts folder.
-
-Each benchmark records one cold call separately, performs the requested extra
-warmups, and reports median, p95, and minimum latency across the measured repeats.
-The output JSON includes `benchmark.cold_ms`, `benchmark.warm_ms`,
-`benchmark.stages_ms`, and `benchmark.registration_input_points`.
-`depth_to_cloud` includes camera back-projection, transforms, correction, and
-fusion. The other stages cover registration, background classification, and
-foreground processing/summit extraction. Inspect the result's success/error and
-registration acceptance together with timings; a fast rejected request is not a
-successful pose result. Repeat comparisons on resistor, normal-fill, and full-fill
-captures from every selected bin.
-
-**These measurements start from depth images already loaded on the selected
-device.** They exclude hardware capture/exposure, structured-light depth
-reconstruction, model loading, file I/O, initial input upload, and ROS transport.
-They also exclude the live request's final cache cleanup. RViz is disabled during
-replay. Per-stage GPU synchronization makes stage timings
-comparable but adds measurement overhead. These timings are not the full HMI
-`GetPose` latency and do not demonstrate a 100 ms end-to-end processing budget;
-structured-light reconstruction and service overhead require separate live timing.
-
-## Activate and run the HMI contour test
-
-For the cell-4 scene-0/B2 layout with `bin_a` and `bin_b`, use the existing
-**Celestica Contour Map Test** in the HMI's test workflows. Its files are:
-
-| Purpose | Path under the artifacts folder |
+| Files | Default host location |
 | --- | --- |
-| HMI sequence | `sequence/celestica/test/contour_map_test.xml` |
-| Workflow and calibration selection | `workflow_configs/contour_map_test.yaml` |
-| Requested camera settings and pose task | `config/parts/bin_picking/highest_part.yaml` |
-| Active bin model and filtering settings | `config/pose_estimation/contour_summit_pose_params.yaml` |
+| Captures, logs, previews, CAD uploads and all build/validation results | `data/bin_model/<session-name>/` |
+| Full candidate, including training settings and CAD evidence | `data/bin_model/<session-name>/candidate-NN/` |
+| Model used by production: `model.json` and numerical `arrays/` | `ebots_system_artifacts/artifacts_cell_4/calibration/deployment/bin/<model-name>/` |
+| Shared station calibration | `ebots_system_artifacts/artifacts_cell_4/calibration/deployment/camera/` and `robot/` |
+| Deployment state and rollback history | `data/bin_model/deployment/` |
 
-`highest_part.yaml` uses the collected 8 ms setting explicitly for both sensors:
+The first candidate directory may be named `candidate`; later builds use names
+such as `candidate-02`. Only the runtime files go into artifacts. Captures,
+training settings, CAD meshes and validation reports stay with the local session.
+Production uses the existing shared camera and robot calibration. The model
+records expected calibration values so a changed calibration can be detected.
+Frozen calibration files remain with offline captures and candidates for replay.
+The runtime does not load an STL or fit CAD on each pose request.
 
-```yaml
-exposure_time_spot_light: [8.0, 8.0]
-exposure_time_structure_light: [8.0, 8.0]
-gain: [0.0, 0.0]
-black_level: [240, 240]
-```
+## If something goes wrong
 
-The calibrated model requires both sensors' structured-light exposures, gains
-and black levels; a singleton exposure or omitted gain/black level is rejected.
-To use another exposure qualified by the candidate's validation report, change
-all four spotlight/structured-light values together. The default collection
-tests 4, 8, 12, 16 and 20 ms. Keep gain and black level equal to the collected
-values. Reload cached part settings before running after an edit.
-The model reload service does not reload part settings; restart
-Brain/Eyes/Perception to clear those caches.
+| What you see | What to do |
+| --- | --- |
+| **Address already in use** at startup | Open the existing page first. If another application owns that port, run with `--port 8766` and open `http://localhost:8766`. Stop an old Bin Setup server before starting another on the same data root. |
+| **Camera connection needs attention** | Expand Connection details, resolve the listed camera/Eyes issue, then Check connection again. Do not start a duplicate Eyes service for the same scene. |
+| A capture fails | Keep the session. Fix the reported problem, prepare that unfinished arrangement again, and click Ready. The app preserves the failed attempt and retakes that arrangement's entire sweep. |
+| You need a pause | Click **Stop after current capture**. Wait for the current request to finish. Later, Open session resumes at the first unfinished stage. |
+| The app waits for camera buffers after a timeout | Leave the server running while cleanup finishes. See the [recovery instructions](STATION_SETUP.md#stopping-recovery-and-daily-checks) if Eyes cannot finish. |
+| The browser closes | Reopen the page. The server finishes its current stage and waits before the next arrangement. |
+| A completed arrangement was prepared incorrectly | Record its stage name and ask the integrator to reset that stage's data before building; do not relabel the saved capture as a different placement. |
 
-1. Wait for **Build and validate** to finish and review a passing physical
-   production-validation result. Building alone does not change the active
-   model. Finish collection before switching the station to its HMI workflow.
-2. Run the station's camera, Eyes, updated Perception, Brain and HMI services in
-   hardware mode. If Brain/Eyes/Perception were already running with older
-   binaries or cached part settings, restart those services through the normal
-   station procedure after validation completes.
-3. In HMI, select **Celestica Contour Map Test** and click **Launch** once.
-   Wait for the nodes to be ready and leave the button at **Run**. Launch loads
-   the scene-0 workflow; Run executes its sequence. Perception needs the workflow
-   loaded and no active pose requests for model activation.
-4. In Bin Setup, click **Use this model** and wait for successful activation.
-   It installs `model.json` and its arrays under
-   `perception_config/bin_filter_models/installed/<model-name>/`, updates
-   `bin_filter_model_path` in `contour_summit_pose_params.yaml`, sets
-   `bin_icp.reference_mode: measured_rim`, and verifies the model loaded by
-   Perception. Activation restores the previous configuration if loading fails.
-   The old model path remains selected until this step succeeds; do not point
-   the pipeline at a build's temporary directory.
-5. Place parts in both bins and click **Run** in HMI. The sequence requests a
-   pose from `bin_a`, then `bin_b`, and stops after one pass. Both must return
-   poses for overall success. An empty bin returns no pose and makes the test
-   fail; inspect Perception logs to distinguish an empty result from a capture
-   or registration error. The workflow enables Summit visualization; use the
-   `perception_config/ros_config/rviz/contour_summit.rviz` display configuration.
+For a daily empty-bin check, choose **New empty check**, capture the fresh empty
+stages, then click **Validate empty check**. It checks the active model without
+refitting. It does not replace full validation for changed lighting, calibration,
+parts or acquisition settings.
 
-This sequence acquires camera data and returns poses without moving the robot.
-The Celestica `sequence/celestica/bin_picking/bin_a.xml` and `bin_b.xml` files are
-placeholders; a robot picking cycle still needs its grasp, motion and placement
-sequence. The other HMI entry, **Pose Estimation Test (Perception Contour
-Summit)**, is a separate multi-scene test and is not configured for this bin
-model. For another scene or bin layout, provide a matching HMI sequence,
-workflow, part settings and deployment target before using its model.
-
-## Stopping, recovery and daily checks
-
-**Stop after current capture** finishes the in-flight request and starts no new
-capture. **Open session** resumes at the first unfinished stage. After an
-interruption, Ready preserves that stage's previous attempt and retakes the
-whole stage. Earlier completed stages remain intact.
-
-A depth-request timeout does not mean Eyes has finished using the capture
-buffers. The updated native client revokes a request that is still queued;
-if Eyes is already using its buffers, cleanup waits until Eyes releases them
-or its process stops. The UI stays busy during cleanup and starts no further
-capture. After three minutes it reports that it is waiting for camera/Eyes to
-release buffers; this is a notification, not a forced process termination.
-Leave the server running until cleanup finishes. The failed attempt is retained,
-and Ready then retakes the unfinished arrangement with a new attempt directory.
-If Eyes cannot finish, stop that Eyes process before retrying.
-
-This timeout protection needs both the updated native helper (rebuilt with
-`bin_filter_offline/native/build.sh YOUR_CAMERA_CONTAINER`) and the corrected
-Eyes build. The Eyes import-close fix remains necessary; caller-side waiting
-does not replace it. Read-only connection checks still have a bounded timeout.
-
-If a capture reports `cudaErrorMemoryAllocation` at `cudaMalloc(&addr, shm->size)`,
-the camera transport has run out of GPU memory. This is unrelated to whether
-the failed exposure is 12 ms or another value. A CPU-only Open3D build still
-uses CUDA for camera buffers and shared-memory transfers. Older Eyes depth
-requests left an imported CUDA buffer open after each capture, allowing GPU
-memory to accumulate. The corrected Eyes code closes that import when each
-request finishes, including on errors.
-
-Restart Eyes after deploying the corrected build to release buffers retained
-by the old process. After **Check connection** passes, open the same session,
-recreate the unfinished arrangement in all selected bins, and click **Scene
-ready — capture exposures**. This preserves the partial attempt and retakes
-its whole exposure sweep (five captures with the defaults). Earlier completed
-stages are preserved; do not reset the dataset.
-
-Closing or refreshing the browser does not stop the server. It finishes the
-current stage and waits for Ready. Ctrl+C requests a stop between captures and
-waits for the active operation to finish. One server may own a data root at a time.
-
-For sessions from an older root-run server, stop it before opening from the host.
-If necessary, repair ownership only for that session and its shared session/part
-configuration directories, preserving captures and previous attempts. New host
-sessions avoid this ownership mismatch.
-
-**New empty check** takes 15 fresh empty test captures at the default exposures
-and checks registration and false foreground against the active model without
-refitting. Full setup is required to qualify resistor retention, new lighting or
-camera settings.
-
-See [saved inputs and outputs](MODEL_STORAGE.md) and the
-[measured model contract](MODERN_MODEL.md).
+When finished, use **Ctrl+C** in the server terminal. It requests a stop between
+captures and waits for an active operation to finish. Do not close that terminal
+while a capture is cleaning up.

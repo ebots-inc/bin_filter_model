@@ -1,6 +1,7 @@
 """Standalone controller tests with temporary sessions and no ROS/camera calls."""
 from pathlib import Path
 import json
+import io
 import shutil
 import sys
 import tempfile
@@ -25,11 +26,9 @@ class StandaloneControllerTest(unittest.TestCase):
         self.data_root = root / 'sessions'
         self.data_root.mkdir()
         source = ROOT / 'ebots_system_artifacts/artifacts_cell_4'
-        helper = source / 'data_saving/bin_model'
-        recipe = dataset.read_yaml(helper / 'recipe.yaml')
-        for relative in ('data_saving/bin_model/prepare_session.py', 'data_saving/bin_model/recipe.yaml',
-                         'workflow_configs/bin_calibration.yaml',
-                         recipe['camera_calibration'], recipe['robot_calibration'], recipe['bin_config']):
+        recipe = dataset.read_yaml(ROOT / 'bin_filter_offline/configs/recipe.yaml')
+        for relative in ('workflow_configs/bin_calibration.yaml',
+                         recipe['camera_calibration'], recipe['robot_calibration']):
             target = self.artifacts / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source / relative, target)
@@ -53,10 +52,133 @@ class StandaloneControllerTest(unittest.TestCase):
         self.addCleanup(controller.pool.shutdown, wait=True)
         return controller
 
+    def test_http_cad_upload_requires_token_bounded_length_and_preserves_binary_bytes(self):
+        def http_server(address, handler):
+            return handler
+        with mock.patch('bin_setup.ThreadingHTTPServer', side_effect=http_server), \
+                mock.patch('bin_setup.secrets.token_urlsafe', return_value='local-secret'):
+            Handler = bin_setup.make_server(self.controller)
+        handler = Handler.__new__(Handler)
+        handler.path = '/api/cad-upload'
+        handler.headers = {'Host': 'localhost:8765', 'X-Bin-Setup-Token': 'local-secret',
+                           'Content-Type': 'application/octet-stream', 'Content-Length': '4',
+                           'X-Cad-Filename': 'Curved%20bin.stl', 'X-Cad-Target': 'all'}
+        handler.rfile = io.BytesIO(b'\x00abc')
+        handler.send = mock.Mock()
+        with mock.patch.object(self.controller, 'submit') as submit:
+            handler.do_POST()
+            submit.assert_called_once_with({'command': 'cad_upload', 'filename': 'Curved bin.stl',
+                                            'payload': b'\x00abc', 'target': 'all'})
+            self.assertEqual(handler.send.call_args.args[1], 202)
+            submit.reset_mock()
+            handler.headers['Content-Length'] = str(17 * 1024 * 1024)
+            handler.do_POST()
+            submit.assert_not_called()
+            self.assertEqual(handler.send.call_args.args[1], 409)
+            handler.headers['X-Bin-Setup-Token'] = 'wrong'
+            handler.do_POST()
+            submit.assert_not_called()
+            self.assertEqual(handler.send.call_args.args[1], 403)
+
     def idle(self, controller=None):
         controller = controller or self.controller
         controller.pool.submit(lambda: None).result(timeout=10)
         self.assertFalse(controller.busy)
+
+    def layout_preview_request(self):
+        return {'command': 'layout_preview', 'scene_id': 4, 'empty_confirmed': True,
+                'ready_token': self.controller.token}
+
+    def test_layout_operations_before_session_creation_do_not_open_a_session(self):
+        self.controller.folder = None
+        self.controller.selection_file.unlink()
+        for command in ('layout_preview', 'layout_analyze', 'layout_save'):
+            request = self.layout_preview_request() | {'command': command}
+            with self.subTest(command=command), mock.patch.object(self.ops, 'execute', return_value={'layout': command}) as execute:
+                self.controller.submit(request)
+                self.idle()
+                self.assertIsNone(self.controller.error)
+                self.assertIsNone(self.controller.folder)
+                self.assertFalse(self.controller.selection_file.exists())
+                self.assertEqual(execute.call_args.args[0], request)
+                self.assertEqual(self.controller.result, {'layout': command})
+        self.connection.assert_called_once_with(4)
+        self.assertFalse(self.captured)
+
+    def test_layout_operations_preserve_the_open_session_and_use_explicit_scene(self):
+        session_before = (self.folder / 'session.json').read_bytes()
+        selection_before = self.controller.selection_file.read_bytes()
+        for command in ('layout_preview', 'layout_analyze', 'layout_save'):
+            request = self.layout_preview_request() | {'command': command}
+            with self.subTest(command=command), mock.patch.object(self.ops, 'execute', return_value={'layout': command}) as execute:
+                self.controller.submit(request)
+                self.idle()
+                self.assertIsNone(self.controller.error)
+                self.assertEqual(self.controller.folder, self.folder)
+                self.assertEqual((self.folder / 'session.json').read_bytes(), session_before)
+                self.assertEqual(self.controller.selection_file.read_bytes(), selection_before)
+                self.assertEqual(execute.call_args.args[0], request)
+                self.assertNotIn('session_path', execute.call_args.args[0])
+        self.connection.assert_called_once_with(4)
+        self.assertEqual(self.controller.camera_connection['scene_id'], 4)
+        self.assertFalse(self.captured)
+
+    def test_layout_photo_requires_explicit_empty_confirmation_and_fresh_readiness(self):
+        request = self.layout_preview_request()
+        for confirmation in (None, False, 'true', 1):
+            with self.subTest(confirmation=confirmation), self.assertRaisesRegex(dataset.DatasetError, 'Empty all bins'):
+                self.controller.submit(request | {'empty_confirmed': confirmation})
+        self.assertEqual(self.controller.token, request['ready_token'])
+        with mock.patch.object(self.ops, 'execute', return_value={'preview': True}):
+            self.controller.submit(request)
+            self.assertNotEqual(self.controller.token, request['ready_token'])
+            self.idle()
+        with self.assertRaisesRegex(dataset.DatasetError, 'scene changed'):
+            self.controller.submit(request)
+        self.connection.assert_called_once_with(4)
+
+    def test_layout_photo_failed_camera_readiness_does_not_start_acquisition(self):
+        self.connection.return_value = {'ready': False, 'message': 'Camera server is stopped'}
+        request = self.layout_preview_request()
+        with mock.patch.object(self.ops, 'execute') as execute:
+            self.controller.submit(request)
+            self.idle()
+            execute.assert_not_called()
+        self.assertIn('Camera is not ready', self.controller.error)
+        self.assertFalse(self.captured)
+        self.assertNotEqual(self.controller.token, request['ready_token'])
+        self.assertEqual(self.controller.folder, self.folder)
+
+    def test_layout_photo_requires_its_own_valid_scene_selection(self):
+        for scene in (None, '4', True, -1, 256):
+            with self.subTest(scene=scene), self.assertRaisesRegex(dataset.DatasetError, 'Select the calibrated scene'):
+                self.controller.submit(self.layout_preview_request() | {'scene_id': scene})
+        self.connection.assert_not_called()
+        self.assertFalse(self.captured)
+
+    def test_explicit_readiness_scene_does_not_redirect_an_ordinary_stage_capture(self):
+        self.controller.submit({'command': 'check_connection', 'scene_id': 4})
+        self.idle()
+        self.connection.assert_called_once_with(4)
+        self.connection.reset_mock()
+        self.controller.submit(self.ready() | {'scene_id': 4})
+        self.idle()
+        self.assertIsNone(self.controller.error)
+        self.connection.assert_called_once_with(0)
+
+    def test_layout_guide_asset_is_served_only_from_its_allowlisted_url(self):
+        with mock.patch('bin_setup.ThreadingHTTPServer', side_effect=lambda address, handler: handler):
+            Handler = bin_setup.make_server(self.controller)
+        handler = Handler.__new__(Handler)
+        handler.headers = {'Host': 'localhost:8765'}
+        handler.send = mock.Mock()
+        handler.path = '/guide/assets/layout-setup.svg'
+        handler.do_GET()
+        self.assertIn('<svg', handler.send.call_args.args[0])
+        self.assertEqual(handler.send.call_args.kwargs['content_type'], 'image/svg+xml')
+        handler.path = '/guide/assets/../../bin_setup.py'
+        handler.do_GET()
+        self.assertEqual(handler.send.call_args.args[1], 404)
 
     def ready(self, controller=None):
         state = (controller or self.controller).state()
@@ -374,11 +496,12 @@ class StandaloneControllerTest(unittest.TestCase):
         self.assertEqual(self.controller.state()['camera_connection']['scene_id'], 4)
         self.assertEqual(self.captured, [])
 
-    def test_connection_for_active_session_cannot_be_changed_by_new_setup_selection(self):
+    def test_explicit_connection_check_uses_new_setup_scene_without_changing_open_session(self):
         self.controller.submit({'command': 'check_connection', 'scene_id': 4})
         self.idle()
-        self.connection.assert_called_once_with(0)
-        self.assertEqual(self.controller.state()['camera_connection']['scene_id'], 0)
+        self.connection.assert_called_once_with(4)
+        self.assertEqual(self.controller.state()['camera_connection']['scene_id'], 4)
+        self.assertEqual(self.controller.state()['session']['scene_id'], 0)
 
     def test_opening_session_rechecks_its_scene(self):
         self.controller.submit({'command': 'select', 'session_path': str(self.folder)})

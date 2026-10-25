@@ -10,7 +10,7 @@ if [ "$#" -lt 1 ] || [ "$#" -gt 2 ] || [ "$1" = --help ] || [ "$1" = -h ]; then
   exit 2
 fi
 capture_container=$1
-capture_destination=${2:-/root/artifacts/data_saving/bin_model/tools/native}
+capture_destination=${2:-/root/bin_filter_offline/native}
 capture_user="$(id -u):$(id -g)"
 capture_stage=$(mktemp -d /tmp/bin-capture-source.XXXXXX)
 trap 'rm -rf -- "$capture_stage"' EXIT

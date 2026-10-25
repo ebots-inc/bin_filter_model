@@ -134,12 +134,30 @@ class HostCameraRuntimeTests(unittest.TestCase):
                 path = root / f'calibration/{name}.yaml'
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(value)
-        self.runtime = DockerRuntime('eyes-test', inspection=inspection((self.artifacts, '/root/artifacts')))
+        self.remote_files = self.root / 'camera-temporary'
+        self.remote_files.mkdir()
+        self.runtime = DockerRuntime('eyes-test', inspection=inspection(
+            (self.artifacts, '/root/artifacts'), (self.remote_files, '/tmp')))
         self.client = camera_runtime.HostCameraCapture(self.artifacts, container='eyes-test')
         self.runtime_patch = patch.object(self.client, 'runtime', return_value=self.runtime)
         self.runtime_patch.start()
         self.addCleanup(self.runtime_patch.stop)
         self.progress = []
+        self.transfer_number = 0
+        def create_transfer(runtime):
+            self.transfer_number += 1
+            remote = Path(f'/tmp/bin-model-capture.test-{self.transfer_number}')
+            Path(runtime.to_host(remote)).mkdir()
+            return remote
+        def copy_transfer(runtime, remote, local):
+            shutil.copytree(Path(runtime.to_host(remote)) / 'capture', local)
+        def remove_transfer(runtime, remote):
+            shutil.rmtree(runtime.to_host(remote))
+        for name, implementation in [('create_transfer', create_transfer), ('copy_transfer', copy_transfer),
+                                      ('remove_transfer', remove_transfer)]:
+            patched = patch.object(self.client, name, side_effect=implementation)
+            patched.start()
+            self.addCleanup(patched.stop)
 
     def native_output(self, command):
         self.assertEqual(command[:2], ['docker', 'exec'])
@@ -185,7 +203,7 @@ class HostCameraRuntimeTests(unittest.TestCase):
         self.assertNotIn('--output', command)
         self.assertNotIn('--part-name', command)
         self.assertEqual(run.call_args.kwargs['timeout'], 20)
-        self.assertFalse((self.shared / 'transfers').exists())
+        self.assertFalse((self.folder / '.transfers').exists())
 
     def test_missing_service_report_and_invalid_helper_output_fail_closed(self):
         report = readiness(False)
@@ -248,7 +266,7 @@ class HostCameraRuntimeTests(unittest.TestCase):
                  self.assertRaises(data.DatasetError):
                 self.collect()
             run.assert_not_called()
-        self.assertFalse((self.shared / 'transfers').exists())
+        self.assertFalse((self.folder / '.transfers').exists())
 
     def test_success_checks_frozen_inputs_and_publishes_after_copy(self):
         before = {path: path.read_bytes() for path in (self.part, self.local_part,
@@ -271,7 +289,9 @@ class HostCameraRuntimeTests(unittest.TestCase):
             self.collect()
         self.assertEqual((self.destination / 'depth/Frame0.exr').read_bytes(), b'original depth evidence')
         self.assertTrue((self.destination / 'capture_manifest.yaml').is_file())
-        self.assertEqual(list((self.shared / 'transfers').iterdir()), [])
+        self.assertEqual(list((self.folder / '.transfers').iterdir()), [])
+        self.assertFalse((self.shared / 'transfers').exists())
+        self.assertEqual(list(self.remote_files.iterdir()), [])
         self.assertEqual(list(self.destination.parent.glob('.incoming-*')), [])
         self.assertEqual(before, {path: path.read_bytes() for path in before})
 
@@ -294,7 +314,7 @@ class HostCameraRuntimeTests(unittest.TestCase):
         with patch('camera_runtime.subprocess.Popen') as run, self.assertRaisesRegex(data.DatasetError, 'registered'):
             self.collect(self.capture | {'part_name': 'data_saving/bin_model/sessions/another/depth_04ms'})
         run.assert_not_called()
-        self.assertFalse((self.shared / 'transfers').exists())
+        self.assertFalse((self.folder / '.transfers').exists())
 
     def test_existing_destination_is_never_overwritten_or_dispatched(self):
         self.destination.mkdir(parents=True)
@@ -309,7 +329,7 @@ class HostCameraRuntimeTests(unittest.TestCase):
         attempts = []
         def acquire(command, **kwargs):
             output = self.native_output(command)
-            attempts.append(output.parent)
+            attempts.append(sorted((self.folder / '.transfers').iterdir())[-1])
             self.create_native_capture(output, complete=len(attempts) > 1)
             kwargs['stdout'].write('camera acquisition failed\n' if len(attempts) == 1 else 'complete\n')
             return self.completed_process(2 if len(attempts) == 1 else 0)
@@ -336,7 +356,7 @@ class HostCameraRuntimeTests(unittest.TestCase):
                      self.assertRaises((data.DatasetError, OSError)):
                     self.collect()
                 self.assertFalse(self.destination.exists())
-                self.assertTrue(any((self.shared / 'transfers').iterdir()))
+                self.assertTrue(any((self.folder / '.transfers').iterdir()))
                 self.assertEqual(list(self.destination.parent.glob('.incoming-*')), [])
 
     def test_capture_deadline_waits_without_killing_and_preserves_failed_attempt(self):
@@ -348,7 +368,7 @@ class HostCameraRuntimeTests(unittest.TestCase):
                     self.assertTrue(kwargs['start_new_session'])
                     self.assertNotIn('timeout', kwargs)
                     output = self.native_output(command)
-                    attempts.append(output.parent)
+                    attempts.append(sorted((self.folder / '.transfers').iterdir())[-1])
                     self.create_native_capture(output, complete=False)
                     def wait(timeout=None):
                         self.assertFalse(kwargs['stdout'].closed)
@@ -384,6 +404,37 @@ class HostCameraRuntimeTests(unittest.TestCase):
         self.assertFalse(attempts[1].exists())
         self.assertTrue((self.destination / 'capture_manifest.yaml').is_file())
 
+
+
+class DockerTransferTests(unittest.TestCase):
+    def setUp(self):
+        self.client = camera_runtime.HostCameraCapture(Path('/tmp/artifacts'), container='eyes-test')
+        self.runtime = MagicMock(container='eyes-test')
+
+    def test_helper_is_installed_outside_artifacts(self):
+        self.assertEqual(self.client.program_path(self.runtime), '/root/bin_filter_offline/native/bin_capture')
+        self.runtime.to_runtime.assert_not_called()
+
+    def test_temporary_directory_is_validated_before_use(self):
+        for name in ('/tmp/bin-model-capture.example', '/', '/root/artifacts', '/tmp/bin-model-capture.x/../y'):
+            result = subprocess.CompletedProcess([], 0, name + '\n', '')
+            with self.subTest(name=name), patch('camera_runtime.subprocess.run', return_value=result) as run:
+                if name == '/tmp/bin-model-capture.example':
+                    self.assertEqual(self.client.create_transfer(self.runtime), Path(name))
+                else:
+                    with self.assertRaises(data.DatasetError):
+                        self.client.create_transfer(self.runtime)
+                self.assertEqual(run.call_args.args[0][:4], ['docker', 'exec', 'eyes-test', 'mktemp'])
+
+    def test_copy_and_cleanup_keep_paths_as_literal_arguments(self):
+        result = subprocess.CompletedProcess([], 0, '', '')
+        with patch('camera_runtime.subprocess.run', return_value=result) as run:
+            self.client.copy_transfer(self.runtime, Path('/tmp/bin-model-capture.example'), Path('/tmp/local folder'))
+            self.assertEqual(run.call_args.args[0], ['docker', 'cp',
+                'eyes-test:/tmp/bin-model-capture.example/capture', '/tmp/local folder'])
+            self.client.remove_transfer(self.runtime, Path('/tmp/bin-model-capture.example'))
+            self.assertEqual(run.call_args.args[0], ['docker', 'exec', 'eyes-test', 'rm', '-rf', '--',
+                                                   '/tmp/bin-model-capture.example'])
 
 if __name__ == '__main__':
     unittest.main()

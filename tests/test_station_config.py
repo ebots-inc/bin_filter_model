@@ -2,6 +2,7 @@
 from copy import deepcopy
 from pathlib import Path
 import shutil
+import os
 import sys
 import tempfile
 import unittest
@@ -20,18 +21,17 @@ class StationConfigurationTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.artifacts = self.root / 'artifacts'
         source = Path(__file__).resolve().parents[2] / 'ebots_system_artifacts/artifacts_cell_4'
-        helper = source / 'data_saving/bin_model'
-        self.recipe = data.read_yaml(helper / 'recipe.yaml')
-        for relative in ('data_saving/bin_model/prepare_session.py', 'data_saving/bin_model/recipe.yaml',
-                         'workflow_configs/bin_calibration.yaml',
-                         self.recipe['camera_calibration'], self.recipe['robot_calibration'], self.recipe['bin_config']):
+        helper = Path(__file__).resolve().parents[1]
+        self.recipe = data.read_yaml(helper / 'configs/recipe.yaml')
+        for relative in ('workflow_configs/bin_calibration.yaml',
+                         self.recipe['camera_calibration'], self.recipe['robot_calibration']):
             target = self.artifacts / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source / relative, target)
         self.robot_path = 'calibration/deployment/robot/station_reference.yaml'
         self.write(self.robot_path, {'name': 'A1', 'hand_eye': [
             {'scene_id': scene, 'calibration': [0., 0., 0., 0., 0., 0.]} for scene in (1, 4)]})
-        template = data.read_yaml(self.artifacts / self.recipe['bin_config'])
+        template = data.read_yaml(helper / self.recipe['bin_config'])
         for scene, names in ((1, ['resistors']), (4, ['left', 'middle', 'right'])):
             camera = self.artifacts / f'calibration/deployment/camera/scene{scene}_denali0_params.yaml'
             shutil.copyfile(self.artifacts / self.recipe['camera_calibration'], camera)
@@ -56,6 +56,21 @@ class StationConfigurationTests(unittest.TestCase):
                 'camera_calibration': f'calibration/deployment/camera/scene{scene}_denali0_params.yaml',
                 'bin_config': f'data_saving/bin_model/layouts/scene{scene}.yaml'}
 
+    def cad_plan(self, name='curved-bin', **changes):
+        directory = 'data_saving/bin_model/cad_references/'
+        mesh = self.artifacts / directory / 'curved-bin.stl'
+        mesh.parent.mkdir(parents=True, exist_ok=True)
+        # Inventory validates paths and YAML metadata, without parsing meshes.
+        mesh.write_text('mesh is loaded only when the build starts')
+        entry = {'mesh_path': mesh.name, 'scale_to_mm': 1.,
+                 'bin_from_cad': [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]}
+        plan = {'name': 'Curved bin reference', 'scene_id': 4, 'frame_id': 'A1',
+                'bins': {name: deepcopy(entry) for name in ('left', 'middle', 'right')}}
+        plan.update(changes)
+        relative = directory + name + '.yaml'
+        self.write(relative, plan)
+        return relative, plan
+
     def test_inventory_lists_deployed_files_scenes_and_arbitrary_bin_names(self):
         inventory = station_config.inventory(self.artifacts, self.recipe)
         self.assertEqual(inventory['scenes'], [0, 1, 2, 3, 4])
@@ -65,6 +80,52 @@ class StationConfigurationTests(unittest.TestCase):
         self.assertEqual(layouts[4]['frame_id'], 'A1')
         self.assertEqual([item['scene_id'] for item in inventory['eyes_workflow']['scenes']], [0, 1, 4])
         self.assertEqual(inventory['eyes_workflow']['issues'], [])
+        self.assertEqual(inventory['cad_references'], [])
+
+    def test_cad_inventory_and_selection_use_the_saved_session(self):
+        relative, _ = self.cad_plan()
+        inventory = station_config.inventory(self.artifacts, self.recipe)
+        self.assertEqual(inventory['cad_references'], [{'path': relative, 'label': 'Curved bin reference',
+            'scene_id': 4, 'frame_id': 'A1', 'bin_ids': ['left', 'middle', 'right']}])
+        session = {'scene_id': 4, 'frame_id': 'A1', 'bin_ids': ['right', 'left']}
+        self.assertEqual(station_config.selected_cad_reference(self.artifacts, relative, session),
+                         self.artifacts / relative)
+        for selection in ('', None):
+            self.assertIsNone(station_config.selected_cad_reference(self.artifacts, selection, session))
+        for changed in ({'scene_id': 0}, {'frame_id': 'B2'}, {'bin_ids': ['missing']}):
+            with self.subTest(changed=changed), self.assertRaisesRegex(data.DatasetError, 'open session'):
+                station_config.selected_cad_reference(self.artifacts, relative, dict(session, **changed))
+
+    def test_invalid_cad_plans_are_reported_without_hiding_valid_ones(self):
+        valid, plan = self.cad_plan()
+        self.write('data_saving/bin_model/cad_references/not-a-mapping.yaml', [])
+        bad = deepcopy(plan)
+        del bad['bins']['left']['scale_to_mm']
+        self.write('data_saving/bin_model/cad_references/missing-scale.yaml', bad)
+        for index, changes in enumerate(({'scene_id': True}, {'frame_id': ''}, {'name': []}, {'bins': []})):
+            self.write(f'data_saving/bin_model/cad_references/bad-{index}.yaml', dict(plan, **changes))
+        inventory = station_config.inventory(self.artifacts, self.recipe)
+        self.assertEqual([item['path'] for item in inventory['cad_references']], [valid])
+        self.assertEqual(len(inventory['issues']), 6)
+        self.assertTrue(any('scale_to_mm' in issue for issue in inventory['issues']))
+
+    def test_cad_plan_and_mesh_must_remain_inside_artifacts(self):
+        relative, plan = self.cad_plan()
+        directory = (self.artifacts / relative).parent
+        external = self.root / 'external.stl'
+        external.write_text('external mesh')
+        for mesh_name in (str(external), os.path.relpath(external, directory), 'linked.stl'):
+            if mesh_name == 'linked.stl':
+                (directory / mesh_name).symlink_to(external)
+            plan['bins']['left']['mesh_path'] = mesh_name
+            self.write(relative, plan)
+            with self.subTest(mesh_name=mesh_name), self.assertRaises(data.DatasetError):
+                station_config.cad_reference_info(self.artifacts, relative)
+        outside_plan = self.root / 'external.yaml'
+        outside_plan.write_text(yaml.safe_dump(plan))
+        (directory / 'linked.yaml').symlink_to(outside_plan)
+        with self.assertRaises(data.DatasetError):
+            station_config.cad_reference_info(self.artifacts, str((directory / 'linked.yaml').relative_to(self.artifacts)))
 
     def test_one_and_three_bin_setups_preserve_deployment_calibration(self):
         operations = Operations(self.artifacts, self.root / 'sessions', self.root / 'models', self.root / 'pipeline.yaml')

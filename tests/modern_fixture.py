@@ -40,7 +40,7 @@ def create_session(root):
               'guided':{'loaded_arrangements':1,
                         'normal_fill_instruction':'Several synthetic bumps.', 'full_fill_instruction':'Several larger synthetic bumps.',
                         'acceptance':{'minimum_part_thickness_mm':None}}}
-    helper = HERE.parent / 'ebots_system_artifacts/artifacts_cell_4/data_saving/bin_model/prepare_session.py'
+    helper = HERE / 'prepare_session.py'
     spec = importlib.util.spec_from_file_location('modern_collection_fixture', helper)
     frontend = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(frontend)

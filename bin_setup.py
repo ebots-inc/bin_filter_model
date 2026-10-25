@@ -14,10 +14,11 @@ import secrets
 import shutil
 import subprocess
 import threading
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, unquote
 
 import dataset as data
 import deployment
+import cad_upload
 from camera_runtime import HostCameraCapture, json_report
 from docker_runtime import DockerRuntime, discover_container
 from setup_operations import Operations
@@ -89,6 +90,7 @@ class Controller:
                     'storage_free_gb': round(shutil.disk_usage(self.ops.data_root).free / 1e9, 1),
                     'candidate_exists': bool(self.folder and (self.ops.candidate(self.folder) / 'production_validation/acceptance.json').is_file()),
                     'review_exists': bool(self.folder and self.ops.review_path(self.folder).is_file()),
+                    'cad': cad_upload.state(self.folder),
                     'catalog': self.ops.execute({'command': 'catalog'}, self.log, self.reload_runtime)}
 
     def submit(self, request):
@@ -102,7 +104,8 @@ class Controller:
                 return
             if self.busy:
                 raise data.DatasetError('An operation is still running')
-            allowed = {'prepare', 'select', 'preview', 'capture_stage', 'build', 'review', 'activate', 'rollback', 'quick_check', 'check_connection'}
+            allowed = {'prepare', 'select', 'preview', 'capture_stage', 'build', 'review', 'activate', 'rollback', 'quick_check', 'check_connection',
+                       'cad_upload', 'cad_preview', 'cad_confirm', 'layout_preview', 'layout_analyze', 'layout_save'}
             if command not in allowed:
                 raise data.DatasetError('Unknown Bin Setup operation')
             if command == 'capture_stage':
@@ -111,6 +114,14 @@ class Controller:
                         request.get('stage_id') != state['current_stage']['id']):
                     raise data.DatasetError('The scene changed. Review the current instructions before confirming Ready.')
                 # Consume readiness before starting the worker, including on failure.
+                self.token = secrets.token_urlsafe(24)
+            elif command == 'layout_preview':
+                if request.get('empty_confirmed') is not True:
+                    raise data.DatasetError('Empty all bins, remove your hands, and confirm the scene is ready before taking a layout photo.')
+                if type(request.get('scene_id')) is not int or not 0 <= request['scene_id'] <= 255:
+                    raise data.DatasetError('Select the calibrated scene before taking a layout photo.')
+                if request.get('ready_token') != self.token:
+                    raise data.DatasetError('The scene changed. Review the empty-bin instructions before taking a new layout photo.')
                 self.token = secrets.token_urlsafe(24)
             self.busy = True
             self.active_command = command
@@ -124,7 +135,7 @@ class Controller:
             self.camera_connection = dict(self.camera_connection, checking=True)
         try:
             session = self._session()
-            scene = session['scene_id'] if session else (self.ops.recipe['scene_id'] if scene_id is None else scene_id)
+            scene = scene_id if scene_id is not None else (session['scene_id'] if session else self.ops.recipe['scene_id'])
             if type(scene) is not int or not 0 <= scene <= 255:
                 raise data.DatasetError('Scene ID must be an integer from 0 to 255')
             if self.check_camera is None:
@@ -217,6 +228,12 @@ class Controller:
                 result = {'opened': str(self.folder)}
             elif command == 'capture_stage':
                 result = self._capture_stage(request)
+            elif command in ('layout_preview', 'layout_analyze', 'layout_save'):
+                # Layout commissioning precedes session creation. An unrelated
+                # open collection session remains selected and unchanged.
+                if command == 'layout_preview':
+                    self._check_connection(required=True, scene_id=request['scene_id'])
+                result = self.ops.execute(request, self.log, self.reload_runtime, self.capture)
             else:
                 if command != 'rollback' and self.folder is None:
                     raise data.DatasetError('Prepare or open a session first')
@@ -268,6 +285,15 @@ def make_server(controller, host='127.0.0.1', port=8765):
                 return self.send({'error': 'Local access only'}, 403)
             if self.path == '/':
                 return self.send(page, content_type='text/html; charset=utf-8')
+            if self.path == '/guide':
+                return self.send(Path(__file__).with_name('guide.html').read_text(),
+                                 content_type='text/html; charset=utf-8')
+            guide_assets = {'/guide/assets/capture-cycle.svg': 'capture-cycle.svg',
+                            '/guide/assets/resistor-placements.svg': 'resistor-placements.svg',
+                            '/guide/assets/layout-setup.svg': 'layout-setup.svg'}
+            if self.path in guide_assets:
+                asset = Path(__file__).parent / 'docs' / guide_assets[self.path]
+                return self.send(asset.read_text(), content_type='image/svg+xml')
             if self.path == '/api/state':
                 return self.send(controller.state())
             self.send({'error': 'Not found'}, 404)
@@ -275,10 +301,22 @@ def make_server(controller, host='127.0.0.1', port=8765):
         def do_POST(self):
             if not self.valid_host() or self.headers.get('X-Bin-Setup-Token') != token:
                 return self.send({'error': 'Refresh the local Bin Setup page'}, 403)
-            if self.path != '/api/command':
+            if self.path not in ('/api/command', '/api/cad-upload'):
                 return self.send({'error': 'Not found'}, 404)
             try:
                 size = int(self.headers.get('Content-Length', '0'))
+                if self.path == '/api/cad-upload':
+                    if not 0 < size <= cad_upload.MAX_UPLOAD_BYTES:
+                        raise ValueError('Choose an STL no larger than 16 MiB')
+                    if self.headers.get('Content-Type') != 'application/octet-stream':
+                        raise ValueError('Expected an STL file upload')
+                    payload = self.rfile.read(size)
+                    if len(payload) != size:
+                        raise ValueError('The CAD upload was incomplete')
+                    controller.submit({'command': 'cad_upload', 'payload': payload,
+                        'filename': unquote(self.headers.get('X-Cad-Filename', '')),
+                        'target': self.headers.get('X-Cad-Target', 'all')})
+                    return self.send({'accepted': True}, 202)
                 if not 0 < size <= 16384:
                     raise ValueError('Invalid request length')
                 request = json.loads(self.rfile.read(size))
@@ -299,7 +337,7 @@ def main():
     parser.add_argument('--data-root', default=str(workspace / 'data/bin_model'))
     parser.add_argument('--models-root')
     parser.add_argument('--pipeline-config')
-    parser.add_argument('--recipe', help='Collection recipe YAML; defaults to the selected artifacts tree')
+    parser.add_argument('--recipe', help='Collection recipe YAML; defaults to bin_filter_offline/configs/recipe.yaml')
     parser.add_argument('--capture-executable')
     parser.add_argument('--replay-executable')
     parser.add_argument('--camera-container', default='auto', help='Eyes container name, or auto to find the station container')
@@ -328,16 +366,15 @@ def main():
 
         def runtime_reload():
             runtime = replay_runtime()
-            tools_path = runtime.to_runtime(artifacts / 'data_saving/bin_model/tools')
-            script = 'import sys,json; sys.path.insert(0,sys.argv[1]); from bin_filter import runtime_reload; print(json.dumps(runtime_reload()))'
-            result = subprocess.run(runtime.command(['timeout', '--kill-after=5s', '75s', 'python3', '-c', script, tools_path]),
+            script = Path(__file__).with_name('runtime_reload_client.py').read_text()
+            result = subprocess.run(runtime.command(['timeout', '--kill-after=5s', '75s', 'python3', '-c', script]),
                                     capture_output=True, text=True, timeout=85)
             if result.returncode:
                 raise data.DatasetError(result.stderr.strip() or result.stdout.strip() or 'Model reload failed')
             return json_report(result.stdout)
 
         operations = Operations(artifacts, root,
-            args.models_root or str(Path(args.artifacts_root) / 'perception_config/bin_filter_models/installed'),
+            args.models_root or str(Path(args.artifacts_root) / 'calibration/deployment/bin'),
             args.pipeline_config or str(Path(args.artifacts_root) / 'config/pose_estimation/contour_summit_pose_params.yaml'),
             replay, runtime_root=capture.runtime_root,
             runtime_path=lambda path: replay_runtime().to_runtime(path),

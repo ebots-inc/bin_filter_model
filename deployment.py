@@ -72,7 +72,7 @@ def _state(root):
     return json.loads(path.read_text()) if path.is_file() else {'history': []}
 
 
-def _activate(candidate, models_root, config_path, reload_runtime, runtime_path=None):
+def _activate(candidate, models_root, config_path, reload_runtime, runtime_path, state_root):
     candidate, models_root, config_path = map(lambda p: Path(p).resolve(), (candidate, models_root, config_path))
     report_path = candidate / 'production_validation/acceptance.json'
     report = json.loads(report_path.read_text())
@@ -99,25 +99,20 @@ def _activate(candidate, models_root, config_path, reload_runtime, runtime_path=
     if not runtime_model_path.is_absolute() or '..' in runtime_model_path.parts:
         raise data.DatasetError('Installed model must have an absolute runtime path')
     original = config_path.read_text()
-    state = _state(models_root)
+    state = _state(state_root)
     previous = {'config': original, 'model_path': data.read_yaml(config_path)['bin_filter_model_path'],
                 'name': state.get('name')}
     if state.get('model_path') and state.get('runtime_model_path', state['model_path']) == previous['model_path']:
         previous['host_model_path'] = state['model_path']
+        for key in ('acceptance', 'candidate_path'):
+            if key in state:
+                previous[key] = state[key]
     # Confirm that the service is reachable and the current model can be reloaded
     # before creating an installed directory or changing the active configuration.
     verify_identity(reload_runtime(), previous['model_path'], previous.get('name'))
     with tempfile.TemporaryDirectory(prefix='.install-', dir=models_root) as temporary:
         stage = Path(temporary) / name
-        shutil.copytree(candidate / 'model', stage)
-        shutil.copytree(candidate / 'production_validation', stage / 'acceptance')
-        # The installed bundle has model.json at its root, whereas a build has
-        # it under model/. Keep relocated replay references usable for review.
-        for result_file in (stage / 'acceptance').glob('*/*/result.json'):
-            recorded = json.loads(result_file.read_text())
-            if recorded.get('model_path_relative_to') == 'result_file':
-                recorded['model_path'] = '../../../model.json'
-                atomic_text(result_file, json.dumps(recorded, indent=2) + '\n')
+        model_io.export_runtime(candidate / 'model', stage)
         stage.rename(destination)
     try:
         atomic_text(config_path, _config_text(original, runtime_model_path))
@@ -132,13 +127,17 @@ def _activate(candidate, models_root, config_path, reload_runtime, runtime_path=
         # Keep the failed package for diagnosis while freeing this readable name
         # for a retry after the runtime problem has been corrected. Only do this
         # after the previous runtime identity has been verified above.
-        attempts = models_root / 'failed_installations' / name
+        attempts = state_root / 'failed_installations' / name
         try:
             attempts.mkdir(parents=True, exist_ok=True)
             counter = 1
             while (attempts / f'attempt-{counter:02d}').exists():
                 counter += 1
-            destination.rename(attempts / f'attempt-{counter:02d}')
+            archive = attempts / f'attempt-{counter:02d}'
+            shutil.move(str(destination), str(archive))
+            atomic_text(archive / 'failure.json', json.dumps({
+                'error': str(error), 'candidate_path': str(candidate),
+                'acceptance': str(report_path)}, indent=2) + '\n')
         except OSError as archive_error:
             raise data.DatasetError(f'Candidate activation failed; previous model restored, '
                                     f'but failed installation could not be archived at {destination}: '
@@ -146,15 +145,16 @@ def _activate(candidate, models_root, config_path, reload_runtime, runtime_path=
         raise data.DatasetError(f'Candidate activation failed; previous model restored: {error}') from error
     result = {'name': name, 'model_path': str(model_path), 'config_path': str(config_path),
               'runtime_model_path': str(runtime_model_path),
+              'candidate_path': str(candidate), 'acceptance': str(report_path),
               'runtime_verified': True, 'identity': identity,
               'history': [*state.get('history', []), previous]}
-    atomic_text(models_root / 'active.json', json.dumps(result, indent=2) + '\n')
+    atomic_text(state_root / 'active.json', json.dumps(result, indent=2) + '\n')
     return result
 
 
-def _rollback(models_root, config_path, reload_runtime):
+def _rollback(models_root, config_path, reload_runtime, state_root):
     models_root, config_path = Path(models_root).resolve(), Path(config_path).resolve()
-    state = _state(models_root)
+    state = _state(state_root)
     if not state.get('history'):
         raise data.DatasetError('No previous bin model is available for rollback')
     previous = state['history'][-1]
@@ -172,13 +172,16 @@ def _rollback(models_root, config_path, reload_runtime):
     result = {'name': previous.get('name'), 'model_path': previous.get('host_model_path', previous['model_path']),
               'runtime_model_path': previous['model_path'], 'config_path': str(config_path),
               'runtime_verified': True, 'identity': identity, 'history': state['history'][:-1]}
-    atomic_text(models_root / 'active.json', json.dumps(result, indent=2) + '\n')
+    for key in ('acceptance', 'candidate_path'):
+        if key in previous:
+            result[key] = previous[key]
+    atomic_text(state_root / 'active.json', json.dumps(result, indent=2) + '\n')
     return result
 
 
 @contextmanager
-def deployment_lock(models_root):
-    root = Path(models_root)
+def deployment_lock(state_root):
+    root = Path(state_root)
     root.mkdir(parents=True, exist_ok=True)
     with (root / '.deployment.lock').open('a') as stream:
         try:
@@ -191,11 +194,20 @@ def deployment_lock(models_root):
             fcntl.flock(stream, fcntl.LOCK_UN)
 
 
-def activate(candidate, models_root, config_path, reload_runtime, runtime_path=None):
-    with deployment_lock(models_root):
-        return _activate(candidate, models_root, config_path, reload_runtime, runtime_path)
+def _state_directory(models_root, state_root):
+    root = Path(state_root).resolve()
+    if root.is_relative_to(Path(models_root).resolve()):
+        raise data.DatasetError('Deployment history must be outside the runtime model directory')
+    return root
 
 
-def rollback(models_root, config_path, reload_runtime):
-    with deployment_lock(models_root):
-        return _rollback(models_root, config_path, reload_runtime)
+def activate(candidate, models_root, config_path, reload_runtime, runtime_path=None, *, state_root):
+    state_root = _state_directory(models_root, state_root)
+    with deployment_lock(state_root):
+        return _activate(candidate, models_root, config_path, reload_runtime, runtime_path, state_root)
+
+
+def rollback(models_root, config_path, reload_runtime, *, state_root):
+    state_root = _state_directory(models_root, state_root)
+    with deployment_lock(state_root):
+        return _rollback(models_root, config_path, reload_runtime, state_root)

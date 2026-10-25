@@ -31,6 +31,8 @@ bin-setup-2026-10-23-03/
       arrays/bins/<bin>/...        # Typed numerical payloads
       calibration/{camera,robot}.yaml
       settings.yaml
+      cad_reference.yaml          # Optional commissioned plan snapshot
+      cad/<bin-id>/<mesh>.stl      # Optional packaged CAD source
     validation/                   # Python geometry diagnostics and PLY previews
     production_validation/
       acceptance.json             # Held-out production detector results
@@ -47,7 +49,11 @@ New sessions reference existing camera files under
 or per-session Eyes workflows are generated. Capture and model calibration
 snapshots retain the actual inputs as evidence. Older sessions with a top-level
 `calibration/` directory or `eyes_capture.yaml` remain readable.
-The model directory is self-contained when copied with its arrays and calibration.
+The candidate model directory is self-contained when copied with its arrays and
+calibration. For a CAD-guided candidate, keep its packaged reference meshes as well.
+Deployment exports a smaller runtime bundle, described below. A CAD plan
+is a build input; choosing it does not edit the session's frozen recipe, bin
+configuration, labels or captures. Later builds preserve earlier candidates.
 The UI waits before each scene, records confirmation, and sweeps exposures without
 changing the arrangement. Interrupted stages are archived and retaken, never
 combined with a newly arranged partial sweep.
@@ -77,6 +83,34 @@ New sessions use each sweep value for both spotlight and structured light on
 both cameras. The capture plan records both exposure fields explicitly. Older
 saved sessions retain their original independent settings when verified or imported.
 
+## Runtime deployment
+
+**Use model** installs only the files needed to load and run an accepted model:
+
+```text
+artifacts/calibration/deployment/bin/<model-name>/
+  model.json
+  arrays/bins/<bin-id>/...
+```
+
+The exporter keeps measured geometry, registration and camera-profile arrays,
+and the metadata needed to check them. The small `calibration_reference` field
+records the expected reconstruction values and selected hand-eye transform;
+the runtime directory contains no copied calibration files. It also omits CAD
+meshes and CAD diagnostic arrays, fitting settings, plots, acceptance reports
+and configuration backups.
+Full evidence remains in the local session and its candidate directories.
+Deployment state, rollback history, locks and failed-install diagnostics are
+stored separately in `data/bin_model/deployment/`. Keep that directory if you
+need the UI's rollback action. Existing rollback models remain runtime bundles.
+
+The pipeline's `bin_filter_model_path` points to the runtime `model.json`.
+Camera and robot configuration continue to come from the station's existing
+`calibration/deployment/camera/` and `calibration/deployment/robot/` directories;
+Perception compares their reconstruction values with `calibration_reference`
+before using the model. Offline capture/candidate calibration snapshots remain
+with the local dataset for reproducibility.
+
 ## Command-line build
 
 The UI runs these operations. They also work independently from this directory:
@@ -88,6 +122,20 @@ python3 bin_filter.py build-session \
   --pipeline-config /path/to/artifacts/config/pose_estimation/contour_summit_pose_params.yaml \
   --replay-executable /path/to/install/perception_node/lib/perception_node/summit_replay
 ```
+
+To add commissioned CAD guidance, append this argument to the build command:
+
+```text
+--cad-reference /path/to/bin_filter_offline/configs/cad_references/bin-reference.yaml
+```
+
+Omit this option for the unchanged measured-only build. The plan must match the
+session's scene/reference frame and include every selected bin. Meshes are STL
+files with explicit scale and per-bin placement. See the
+[commissioning example](STATION_SETUP.md#optional-cad-reference). CAD placement
+and optional bounded refinement use empty training measurements only; held-out
+captures remain evaluation evidence. Selecting CAD does not automatically activate
+the resulting candidate or replace a prior candidate's acceptance report.
 
 The modern recipe selects `calibrated_bin_background`. Fitting learns geometry
 from empty training captures, plus separate camera corrections at each exposure.
@@ -139,6 +187,19 @@ uncertainty, validity and support maps. Unknown heights/tolerances use NaN in
 binary; other values follow the constraints of the corresponding model field.
 Loaders check relative paths, data types, dimensions and exact byte lengths.
 There are no checksums in the array descriptors.
+
+CAD-guided bundles additionally retain each bin's `cad_reference` metadata and
+binary `nominal_height_mm`, `apparent_deviation_mm` and `association_mask` arrays.
+Metadata records `seed_bin_from_cad`, the final `bin_from_cad`, setup parameters
+and diagnostics. The source STL is packaged at `cad/<bin-id>/<mesh>.stl`; the
+model root also contains a `cad_reference.yaml` plan snapshot. These arrays use
+the same typed binary representation. Actual background heights, rim/boundary
+samples and camera profiles remain measured; unsupported
+measurements are not replaced by CAD. Apparent deviation is measured minus
+nominal and can include unresolved sensor error, so it is not a manufacturing
+tolerance measurement. Runtime filtering uses the measured arrays without mesh
+processing. Keep the complete candidate model directory to preserve its reference
+evidence; the deployed runtime export intentionally omits CAD source and diagnostics.
 
 Read [MODERN_MODEL.md](MODERN_MODEL.md) for the measured model contract. Small
 calibration and tuning YAML snapshots remain human-readable; the large grids

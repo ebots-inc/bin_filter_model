@@ -12,6 +12,7 @@ import shutil
 import dataset as data
 import deployment
 import station_config
+import cad_upload
 
 
 class Operations:
@@ -20,6 +21,8 @@ class Operations:
         self.artifacts = Path(artifacts).resolve()
         self.data_root = Path(data_root).resolve()
         self.models_root = Path(models_root).resolve()
+        self.deployment_state_root = self.data_root / 'deployment'
+        self.layouts_root = self.data_root / 'layouts'
         self.config = Path(config).resolve()
         self.replay = replay
         # Session files live on this PC; capture settings may name the same
@@ -27,11 +30,11 @@ class Operations:
         self.runtime_root = Path(runtime_root) if runtime_root is not None else self.data_root
         self.runtime_path = runtime_path
         self.model_path_to_host = model_path_to_host
-        helper = self.artifacts / 'data_saving/bin_model/prepare_session.py'
+        helper = Path(__file__).with_name('prepare_session.py')
         spec = importlib.util.spec_from_file_location('bin_collection', helper)
         self.collection = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.collection)
-        self.recipe = data.read_yaml(recipe_path or helper.parent / 'recipe.yaml')
+        self.recipe = data.read_yaml(recipe_path or helper.parent / 'configs/recipe.yaml')
 
     def inside(self, value, root=None):
         path = Path(value).resolve()
@@ -70,18 +73,22 @@ class Operations:
         command = request['command']
         if command == 'catalog':
             self.data_root.mkdir(parents=True, exist_ok=True)
-            return {'configuration': station_config.inventory(self.artifacts, self.recipe),
+            return {'configuration': station_config.inventory(self.artifacts, self.recipe, layouts_root=self.layouts_root),
                     'sessions': [str(path.parent) for path in sorted(self.data_root.glob('*/session.json'))],
-                    'active': deployment._state(self.models_root)}
+                    'active': deployment._state(self.deployment_state_root)}
         if command == 'prepare':
             mode = 'check' if request.get('quick') else 'guided'
             name = request.get('name') or None
             kwargs = {} if name is None else {'name': name}
-            recipe = station_config.selected_recipe(self.artifacts, self.recipe, request)
+            recipe = station_config.selected_recipe(self.artifacts, self.recipe, request, layouts_root=self.layouts_root)
             folder = self.collection.prepare_session(self.artifacts, self.data_root, self.runtime_root,
                                                        recipe, mode=mode, **kwargs)
             session = json.loads((folder / 'session.json').read_text())
             return {'session_path': str(folder), 'session': session}
+        if command in ('layout_preview', 'layout_analyze', 'layout_save'):
+            import layout_workflow
+            return layout_workflow.execute(self.artifacts, self.data_root, self.recipe,
+                                           request, capture_runtime, progress)
         if command == 'preview':
             import preview
             folder = self.inside(request['session_path'])
@@ -101,6 +108,11 @@ class Operations:
             return result
         if command == 'build':
             folder = self.inside(request['session_path'])
+            session = json.loads((folder / 'session.json').read_text())
+            selection = request.get('cad_reference')
+            cad_reference = (cad_upload.selected_plan(folder, selection, session)
+                if isinstance(selection, str) and selection.startswith('session:') else
+                station_config.selected_cad_reference(self.artifacts, selection, session))
             self.collection.verify_session(folder)
             candidate = folder / 'candidate'
             index = 1
@@ -110,21 +122,54 @@ class Operations:
             name = folder.name if index == 1 else f'{folder.name}-{index:02d}'
             arguments = ['build-session', '--session', folder, '--output', candidate,
                          '--model-name', name, '--pipeline-config', self.config]
+            if cad_reference is not None:
+                arguments += ['--cad-reference', cad_reference]
             if self.replay:
                 arguments += ['--replay-executable', self.replay]
             self.run_cli(arguments, progress)
             acceptance = json.loads((candidate / 'production_validation/acceptance.json').read_text())
             deployment.atomic_text(folder / 'selected_candidate.json', json.dumps({'directory': candidate.name}))
             return {'candidate_path': str(candidate), 'acceptance': acceptance}
+        if command in ('cad_upload', 'cad_preview', 'cad_confirm'):
+            folder = self.inside(request['session_path'])
+            session = json.loads((folder / 'session.json').read_text())
+            if session.get('mode') != 'guided':
+                raise data.DatasetError('CAD references require a model collection session')
+            if command == 'cad_upload':
+                return cad_upload.upload(folder, session, request['filename'], request['payload'], request.get('target', 'all'))
+            if command == 'cad_confirm':
+                if request.get('confirmed') is not True:
+                    raise data.DatasetError('Confirm that you reviewed the CAD size and orientation')
+                return cad_upload.confirm(folder, session, request['preview_path'])
+            self.collection.verify_session(folder, decode_images=False)
+            # A candidate may already supply the measured empty-training fit.
+            # Match provenance/settings; CAD-guided candidates are not baselines.
+            candidates = [self.candidate(folder) / 'model/model.json',
+                          *sorted(folder.glob('candidate*/model/model.json'), reverse=True),
+                          *sorted(folder.glob('cad_baselines/baseline-*/model/model.json'), reverse=True)]
+            baseline = next((model for path in candidates
+                             if (model := cad_upload.matching_baseline(path, folder, session)) is not None), None)
+            if baseline is None:
+                progress('Fitting an empty-training baseline for CAD placement. Held-out captures are excluded from fitting.')
+                destination = cad_upload._new_directory(folder / 'cad_baselines', 'baseline')
+                self.run_cli(['import-session', '--session', folder, '--dataset', destination / 'dataset'], progress)
+                self.run_cli(['calibrate', '--dataset', destination / 'dataset', '--output', destination / 'model',
+                              '--model-name', 'cad-empty-training-baseline'], progress)
+                baseline = cad_upload.matching_baseline(destination / 'model/model.json', folder, session)
+                if baseline is None:
+                    raise data.DatasetError('CAD baseline does not match this session’s empty training data')
+            return cad_upload.preview(folder, session, baseline, request.get('selections'), progress)
         if command == 'review':
             report = self.review_path(request['session_path'])
             return {'acceptance': json.loads(report.read_text())}
         if command == 'activate':
             candidate = self.inside(request['candidate_path'])
             mapping = {} if self.runtime_path is None else {'runtime_path': self.runtime_path}
-            return deployment.activate(candidate, self.models_root, self.config, reload_runtime, **mapping)
+            return deployment.activate(candidate, self.models_root, self.config, reload_runtime,
+                                       state_root=self.deployment_state_root, **mapping)
         if command == 'rollback':
-            return deployment.rollback(self.models_root, self.config, reload_runtime)
+            return deployment.rollback(self.models_root, self.config, reload_runtime,
+                                       state_root=self.deployment_state_root)
         if command == 'quick_check':
             folder = self.inside(request['session_path'])
             self.collection.verify_session(folder)

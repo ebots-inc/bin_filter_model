@@ -30,6 +30,16 @@ def settings():
     return result
 
 
+def write_calibration(root, model):
+    camera = {'world_r': np.eye(3).ravel().tolist(), 'world_t': [0, 0, 0]}
+    camera.update({name: {'rows': 32, 'cols': 40, 'cam_intrinsic': np.eye(3).ravel().tolist(),
+                         'cam_extrinsic': np.eye(4).ravel().tolist()} for name in ('cam1', 'cam2')})
+    robot = {'name': model['frame_id'], 'hand_eye': [{'scene_id': model['scene_id'], 'calibration': [0] * 6}]}
+    for name, value in (('camera', camera), ('robot', robot)):
+        data.write_yaml(Path(root) / 'calibration' / f'{name}.yaml', value)
+    return model_io.calibration_values(camera, robot, model['scene_id'], model['frame_id'])
+
+
 def surface(x, y):
     interior = (np.abs(x) < 12) & (np.abs(y) < 10)
     lip = (np.abs(x) < 20) & (np.abs(y) < 18)
@@ -148,6 +158,25 @@ class ModernModelTests(unittest.TestCase):
             (path.parent / rim['file']).write_bytes(b'bad')
             with self.assertRaisesRegex(data.DatasetError, 'byte size'):
                 model_io.load_model(path)
+
+    def test_runtime_export_keeps_prediction_inputs_and_omits_training_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = model_io.write_model(root / 'candidate', self.model).parent
+            reference = write_calibration(source, self.model)
+            (source / 'settings.yaml').write_text('training: only\n')
+            (source / 'cad').mkdir()
+            (source / 'cad/source.stl').write_text('training only')
+            exported = model_io.export_runtime(source, root / 'runtime')
+            self.assertEqual(model_io.load_model(exported), self.model | {'calibration_reference': reference})
+            self.assertEqual({p.name for p in exported.parent.iterdir()},
+                             {'model.json', 'arrays'})
+            reexport = model_io.export_runtime(exported, root / 'reexport')
+            self.assertEqual(model_io.load_model(exported), model_io.load_model(reexport))
+            (source / 'calibration/camera.yaml').unlink()
+            with self.assertRaisesRegex(data.DatasetError, 'Missing frozen camera'):
+                model_io.export_runtime(source, root / 'incomplete')
+            self.assertFalse((root / 'incomplete').exists())
 
     def test_placement_is_explicit_and_overlapping_world_regions_are_rejected(self):
         model = deepcopy(self.model)

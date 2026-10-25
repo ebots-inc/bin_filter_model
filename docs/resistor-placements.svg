@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 690" role="img" aria-labelledby="title description">
+  <title id="title">Six resistor placement areas in the guided collection</title>
+  <desc id="description">Schematic top views show center, left, right, bottom, top and bottom-left diagonal. The amber area is broad guidance, not an exact target. Place one resistor naturally on the lower bowl of each selected bin, away from the flat rim. Left is negative local X, right positive local X, bottom negative local Y, and top positive local Y. Use the station's established orientation rather than the operator's viewing direction.</desc>
+  <defs>
+    <g id="bowl"><circle r="77" fill="#edf3f6" stroke="#a7b9c5" stroke-width="14"/><circle r="51" fill="none" stroke="#d3dfe6"/><circle r="27" fill="none" stroke="#d3dfe6"/></g>
+    <g id="resistor"><path d="M -16 0 H 16" stroke="#6d461c" stroke-width="2"/><rect x="-9" y="-5" width="18" height="10" rx="2" fill="#a36622" stroke="#6d461c"/><path d="M -3 -5 V 5" stroke="#edd3a2" stroke-width="3"/></g>
+  </defs>
+  <rect width="1100" height="690" rx="16" fill="#f5f8fa"/>
+  <g font-family="system-ui, sans-serif" fill="#17364b">
+    <text x="30" y="40" font-size="25" font-weight="700">One resistor in every selected bin</text>
+    <text x="30" y="70" font-size="17">Use the same named area in all bins. Rotate or move each resistor between arrangements 1, 2 and 3.</text>
+    <g transform="translate(185 205)">
+      <use href="#bowl"/><circle r="24" fill="#f3bd5e" fill-opacity="0.65"/><use href="#resistor"/>
+      <text y="119" text-anchor="middle" font-size="20" font-weight="700">Center</text>
+    </g>
+    <g transform="translate(550 205)">
+      <use href="#bowl"/><path d="M 0 0 L -49 -49 A 69 69 0 0 0 -49 49 Z" fill="#f3bd5e" fill-opacity="0.65"/><use href="#resistor" transform="translate(-38 0) rotate(20)"/>
+      <text y="119" text-anchor="middle" font-size="20" font-weight="700">Left (−X)</text>
+    </g>
+    <g transform="translate(915 205)">
+      <use href="#bowl"/><path d="M 0 0 L 49 -49 A 69 69 0 0 1 49 49 Z" fill="#f3bd5e" fill-opacity="0.65"/><use href="#resistor" transform="translate(38 0) rotate(-20)"/>
+      <text y="119" text-anchor="middle" font-size="20" font-weight="700">Right (+X)</text>
+    </g>
+    <g transform="translate(185 460)">
+      <use href="#bowl"/><path d="M 0 0 L -49 49 A 69 69 0 0 0 49 49 Z" fill="#f3bd5e" fill-opacity="0.65"/><use href="#resistor" transform="translate(0 38) rotate(30)"/>
+      <text y="119" text-anchor="middle" font-size="20" font-weight="700">Bottom (−Y)</text>
+    </g>
+    <g transform="translate(550 460)">
+      <use href="#bowl"/><path d="M 0 0 L -49 -49 A 69 69 0 0 1 49 -49 Z" fill="#f3bd5e" fill-opacity="0.65"/><use href="#resistor" transform="translate(0 -38) rotate(-30)"/>
+      <text y="119" text-anchor="middle" font-size="20" font-weight="700">Top (+Y)</text>
+    </g>
+    <g transform="translate(915 460)">
+      <use href="#bowl"/><path d="M 0 0 L -69 0 A 69 69 0 0 0 0 69 Z" fill="#f3bd5e" fill-opacity="0.65"/><use href="#resistor" transform="translate(-27 27) rotate(40)"/>
+      <text y="119" text-anchor="middle" font-size="20" font-weight="700">Bottom-left diagonal (−X, −Y)</text>
+    </g>
+    <text x="30" y="628" font-size="18" font-weight="600">Amber is a broad direction. The resistor icon is an example, not an exact target.</text>
+    <text x="30" y="657" font-size="17">Place on the lower bowl, off the rim and steep wall. Confirm the station's local directions before starting.</text>
+  </g>
+</svg>

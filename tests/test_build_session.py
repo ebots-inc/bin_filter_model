@@ -22,7 +22,7 @@ class BuildSessionTests(unittest.TestCase):
             import OpenEXR
         except ImportError:
             self.skipTest('Install requirements.txt to exercise real EXR integration')
-        frontend = HERE.parent / 'ebots_system_artifacts/artifacts_cell_4/data_saving/bin_model/prepare_session.py'
+        frontend = HERE / 'prepare_session.py'
         if not frontend.is_file():
             self.skipTest('Collection frontend checkout is unavailable')
         spec = importlib.util.spec_from_file_location('collection_frontend', frontend)

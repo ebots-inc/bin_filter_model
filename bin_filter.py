@@ -181,8 +181,23 @@ def command_calibrate(args):
     for key in ('frame_id', 'scene_id'):
         if key in settings and settings[key] != manifest[key]:
             raise data.DatasetError(f'Bin configuration {key} differs from dataset')
+    cad_plan = None
+    if getattr(args, 'cad_reference', None):
+        if settings.get('model_type') != 'calibrated_bin_background':
+            raise data.DatasetError('--cad-reference requires the calibrated bin-background model')
+        import cad_plan as cad_inputs
+        cad_plan = cad_inputs.load(args.cad_reference, scene_id=manifest['scene_id'],
+                                  frame_id=manifest['frame_id'], bin_ids=configured_bins)
+        settings = cad_inputs.apply(settings, cad_plan)
+    elif any('cad_reference' in config for config in settings['bins'].values()):
+        if settings.get('model_type') != 'calibrated_bin_background':
+            raise data.DatasetError('CAD reference settings require the calibrated bin-background model')
+        import cad_plan as cad_inputs
+        for config in settings['bins'].values():
+            if 'cad_reference' in config:
+                config['cad_reference'] = cad_inputs.resolve_config(config['cad_reference'], settings_path.parent)
     if settings.get('model_type') == 'calibrated_bin_background':
-        return calibrate_modern(args, manifest, calibration, settings)
+        return calibrate_modern(args, manifest, calibration, settings, cad_plan=cad_plan)
     kinds = {config.get('kind', 'planar') for config in settings['bins'].values()}
     if len(kinds) != 1 or not kinds.issubset({'planar', 'height_field'}):
         raise data.DatasetError('All bins must use the same supported kind: planar or height_field')
@@ -276,7 +291,7 @@ def command_calibrate(args):
     print(f'Saved {model_path}. Next: validate on held-out recordings; this is not a ROS parameter file.')
 
 
-def calibrate_modern(args, manifest, calibration, settings):
+def calibrate_modern(args, manifest, calibration, settings, cad_plan=None):
     import modern_model
     training = [entry for entry in manifest['captures'] if entry['split'] == 'train'
                 and all(label == 'empty' for label in entry['bins'].values())]
@@ -307,6 +322,9 @@ def calibrate_modern(args, manifest, calibration, settings):
                  calibration={'camera': 'calibration/camera.yaml', 'robot': 'calibration/robot.yaml'})
     output = new_output(args.output)
     shutil.copytree(Path(args.dataset) / 'calibration', output / 'calibration')
+    if any('cad_reference' in item for item in model['bins'].values()):
+        import cad_plan as cad_inputs
+        settings = cad_inputs.package(output, model, settings, cad_plan)
     data.write_yaml(output / 'settings.yaml', settings)
     path = model_io.write_model(output, model, getattr(args, 'output_format', 'bundle'))
     print(f'Saved rim, interior and camera measurement profiles to {path}', flush=True)
@@ -320,9 +338,19 @@ def load_model(args, manifest):
         if model.get('frame_id') != manifest['frame_id'] or model.get('scene_id') != manifest['scene_id']:
             raise data.DatasetError('Model frame/scene does not match the dataset')
         folder = Path(args.model) if Path(args.model).is_dir() else Path(args.model).parent
-        for name, entry in manifest['calibration'].items():
-            if data.read_yaml(folder / f'calibration/{name}.yaml') != data.read_yaml(data.resolve(args.dataset, entry['path'])):
+        if 'calibration_reference' in model:
+            snapshots = {name: data.read_yaml(data.resolve(args.dataset, manifest['calibration'][name]['path']))
+                         for name in ('camera', 'robot')}
+            current = model_io.calibration_values(snapshots['camera'], snapshots['robot'],
+                                                  manifest['scene_id'], manifest['frame_id'])
+            if model_io.calibration_reference(args.model, model) != current:
                 raise data.DatasetError('Model calibration differs from the dataset snapshots')
+        else:
+            # Offline candidates retain full capture-time snapshots. Runtime
+            # exports carry only the relevant values in model.json instead.
+            for name, entry in manifest['calibration'].items():
+                if data.read_yaml(folder / f'calibration/{name}.yaml') != data.read_yaml(data.resolve(args.dataset, entry['path'])):
+                    raise data.DatasetError('Model calibration differs from the dataset snapshots')
         return model
     is_bundle = model.get('model_type') == exposure_profiles.MODEL_TYPE
     if (model.get('model_type') not in (
@@ -473,8 +501,13 @@ def command_convert_model(args):
     source = Path(args.model) if Path(args.model).is_dir() else Path(args.model).parent
     if (source / 'calibration').is_dir():
         shutil.copytree(source / 'calibration', output / 'calibration')
-    if (source / 'settings.yaml').is_file():
-        data.write_yaml(output / 'settings.yaml', model_io._without_versions(data.read_yaml(source / 'settings.yaml')))
+    settings = (model_io._without_versions(data.read_yaml(source / 'settings.yaml'))
+                if (source / 'settings.yaml').is_file() else None)
+    if any('cad_reference' in item for item in model.get('bins', {}).values()):
+        import cad_plan as cad_inputs
+        settings = cad_inputs.package(output, model, settings or {}, source_root=source)
+    if settings is not None:
+        data.write_yaml(output / 'settings.yaml', settings)
     print(f'Saved {model_io.write_model(output, model, args.output_format)}')
 
 
@@ -500,7 +533,8 @@ def command_build_session(args):
         common = dict(dataset=str(stage / 'dataset'), stride=args.stride)
         command_calibrate(argparse.Namespace(**common, config=None, output=str(stage / 'model'),
                           max_fit_points=200000, pool_exposures=len(exposures) > 1,
-                          output_format='bundle', model_name=getattr(args, 'model_name', None) or output.name))
+                          output_format='bundle', model_name=getattr(args, 'model_name', None) or output.name,
+                          cad_reference=getattr(args, 'cad_reference', None)))
         command_validate(argparse.Namespace(**common, model=str(stage / 'model/model.json'),
                          output=str(stage / 'validation'), split='test'))
         acceptance = None
@@ -513,7 +547,7 @@ def command_build_session(args):
             acceptance = validate_production(stage / 'dataset', stage / 'model/model.json', config,
                                               stage / 'production_validation',
                                               getattr(args, 'replay_executable', None))
-        data.write_json(stage / 'build.json', {
+        build_report = {
             'status': acceptance['status'] if acceptance else 'manual_review_required',
             'dataset': 'dataset/dataset.yaml', 'model': 'model/model.json',
             'validation': 'validation/validation.json',
@@ -523,7 +557,12 @@ def command_build_session(args):
             'production_acceptance': 'production_validation/acceptance.json' if acceptance else None,
             'loaded_validation_captures': sum(entry['split'] == 'test' and
                 any(label == 'loaded' for label in entry['bins'].values()) for entry in manifest['captures']),
-        })
+        }
+        from cad_plan import build_metadata
+        cad_metadata = build_metadata(model)
+        if cad_metadata is not None:
+            build_report['cad_reference'] = cad_metadata
+        data.write_json(stage / 'build.json', build_report)
         stage.rename(output)
     print(f'Built {output / "model/model.json"}; review {output / "validation/validation.json"}. '
           'A successful build is not factory acceptance and does not activate the model.')
@@ -537,37 +576,21 @@ def command_production_validate(args):
 
 
 def runtime_reload():
-    import rclpy
-    from std_srvs.srv import Trigger
-    import yaml
-    rclpy.init()
-    node = rclpy.create_node('bin_model_deployment_cli')
-    try:
-        client = node.create_client(Trigger, 'bin_model/reload')
-        if not client.wait_for_service(timeout_sec=5):
-            raise data.DatasetError('Perception bin_model/reload service is unavailable')
-        future = client.call_async(Trigger.Request())
-        rclpy.spin_until_future_complete(node, future, timeout_sec=60)
-        if not future.done() or future.result() is None:
-            raise data.DatasetError('Perception model reload timed out')
-        reply = future.result()
-        if not reply.success:
-            raise data.DatasetError(reply.message)
-        return yaml.safe_load(reply.message)
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    from runtime_reload_client import reload_model
+    return reload_model()
 
 
 def command_activate(args):
     import deployment
-    result = deployment.activate(args.candidate, args.models_root, args.pipeline_config, runtime_reload)
+    result = deployment.activate(args.candidate, args.models_root, args.pipeline_config, runtime_reload,
+                                 state_root=args.deployment_root)
     print(f"Activated and verified {result['model_path']}")
 
 
 def command_rollback(args):
     import deployment
-    result = deployment.rollback(args.models_root, args.pipeline_config, runtime_reload)
+    result = deployment.rollback(args.models_root, args.pipeline_config, runtime_reload,
+                                 state_root=args.deployment_root)
     print(f"Restored and verified {result['model_path']}")
 
 def command_demo(args):
@@ -631,6 +654,7 @@ def parser():
     filt.set_defaults(function=command_filter)
     calibrate.add_argument('--config', help='Default: DATASET/bin_config.yaml')
     calibrate.add_argument('--model-name', help='Readable identity for a new rim model')
+    calibrate.add_argument('--cad-reference', help='Optional commissioned CAD plan YAML; collection data remains unchanged')
     calibrate.add_argument('--output-format', choices=['bundle', 'yaml'], default='bundle',
                            help='Default: checked binary arrays + model.json; yaml is legacy interchange')
     selection = calibrate.add_mutually_exclusive_group()
@@ -659,6 +683,7 @@ def parser():
     build.add_argument('--output', required=True, help='New result directory; published only after all stages succeed')
     build.add_argument('--stride', type=int, default=1)
     build.add_argument('--model-name')
+    build.add_argument('--cad-reference', help='Optional commissioned CAD plan YAML for this candidate')
     build.add_argument('--pipeline-config', help='Production Summit configuration; required for rim-model acceptance')
     build.add_argument('--replay-executable', help='Path to the production summit_replay executable')
     build.set_defaults(function=command_build_session)
@@ -675,6 +700,7 @@ def parser():
     activate.add_argument('--candidate', required=True)
     for command in (activate, rollback):
         command.add_argument('--models-root', required=True)
+        command.add_argument('--deployment-root', required=True, help='History directory outside artifacts, e.g. data/bin_model/deployment')
         command.add_argument('--pipeline-config', required=True)
     activate.set_defaults(function=command_activate)
     rollback.set_defaults(function=command_rollback)

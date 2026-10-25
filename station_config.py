@@ -4,10 +4,16 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 import re
+import math
 import numpy as np
 import yaml
 
 import dataset as data
+import prepare_session as collection
+
+
+CAD_REFERENCE_DIRECTORY = 'data_saving/bin_model/cad_references'  # Legacy setup locations remain readable.
+LOCAL_CAD_REFERENCE_DIRECTORY = 'configs/cad_references'
 
 
 def artifact_file(artifacts, relative, directory=None):
@@ -22,9 +28,64 @@ def artifact_file(artifacts, relative, directory=None):
     return path
 
 
-def inventory(artifacts, recipe):
+def cad_reference_file(artifacts, relative):
+    relative = Path(relative)
+    if relative.parts[:2] == ('configs', 'cad_references'):
+        path = collection.safe_path(collection.HERE, str(relative))
+        if not path.is_relative_to((collection.HERE / LOCAL_CAD_REFERENCE_DIRECTORY).resolve()) or not path.is_file():
+            raise data.DatasetError('Select an existing CAD reference in bin_filter_offline/configs/cad_references')
+        return path, collection.HERE.resolve()
+    return artifact_file(artifacts, relative, CAD_REFERENCE_DIRECTORY), Path(artifacts).resolve()
+
+
+def cad_reference_info(artifacts, relative):
+    """Read a commissioned plan without loading meshes during UI polling."""
     artifacts = Path(artifacts).resolve()
-    cameras, robots, layouts, issues = [], [], [], []
+    path, reference_root = cad_reference_file(artifacts, relative)
+    if path.suffix != '.yaml':
+        raise data.DatasetError('Select a CAD reference YAML plan')
+    value = data.read_yaml(path)
+    scene, frame, name = value.get('scene_id'), value.get('frame_id'), value.get('name')
+    if (type(scene) is not int or not 0 <= scene <= 255
+            or not isinstance(frame, str) or not frame.strip()
+            or not isinstance(name, str) or not name.strip()):
+        raise data.DatasetError('A CAD reference needs name, scene_id and frame_id')
+    bins = value.get('bins')
+    data.validate_bin_ids(bins)
+    for bin_id, entry in bins.items():
+        if not isinstance(entry, dict):
+            raise data.DatasetError(f'CAD reference {bin_id} must be a mapping')
+        mesh_name = entry.get('mesh_path')
+        if not isinstance(mesh_name, str) or not mesh_name.strip() or Path(mesh_name).is_absolute():
+            raise data.DatasetError(f'CAD reference {bin_id} needs mesh_path relative to its plan')
+        mesh = (path.parent / mesh_name).resolve()
+        if not mesh.is_relative_to(reference_root) or not mesh.is_file() or mesh.suffix.lower() != '.stl':
+            raise data.DatasetError(f'CAD reference {bin_id} needs an STL file within its setup directory')
+        scale = entry.get('scale_to_mm')
+        if type(scale) not in (int, float) or not math.isfinite(scale) or scale <= 0:
+            raise data.DatasetError(f'CAD reference {bin_id} needs explicit positive scale_to_mm')
+        data.validate_transform(entry.get('bin_from_cad'), f'CAD reference {bin_id}.bin_from_cad')
+    return {'path': str(Path(relative)), 'label': name, 'scene_id': scene,
+            'frame_id': frame, 'bin_ids': list(bins)}
+
+
+def selected_cad_reference(artifacts, relative, session):
+    """CAD is a build option matched against the saved session, never a new setup."""
+    if relative == '' or relative is None:
+        return None
+    if not isinstance(relative, str):
+        raise data.DatasetError('Select a CAD reference plan from the station setup')
+    info = cad_reference_info(artifacts, relative)
+    if info['scene_id'] != session['scene_id'] or info['frame_id'] != session['frame_id']:
+        raise data.DatasetError('The CAD reference must match the open session scene and reference frame')
+    if not set(session['bin_ids']) <= set(info['bin_ids']):
+        raise data.DatasetError('The CAD reference must include every bin in the open session')
+    return cad_reference_file(artifacts, relative)[0]
+
+
+def inventory(artifacts, recipe, *, layouts_root=None):
+    artifacts = Path(artifacts).resolve()
+    cameras, robots, layouts, cad_references, issues = [], [], [], [], []
     scene_ids = set(range(5))
     errors = (ValueError, TypeError, KeyError, OSError, OverflowError, RuntimeError, yaml.YAMLError)
 
@@ -108,16 +169,31 @@ def inventory(artifacts, recipe):
             issues.append(f'{path.name}: {error}')
     default_layout, candidates = None, set()
     try:
-        default_layout = artifact_file(artifacts, recipe['bin_config'])
-        candidates.add(artifacts / recipe['bin_config'])
+        default_layout = collection.resolve_bin_config(artifacts, recipe['bin_config'])
+        if not default_layout.is_file():
+            raise data.DatasetError(f'Missing bin layout: {default_layout}')
+        candidates.add(default_layout)
     except errors as error:
         issues.append(f'Default bin layout: {error}')
     layout_root = artifacts / 'data_saving/bin_model/layouts'
     if layout_root.is_dir():
         candidates.update(layout_root.rglob('*.yaml'))
+    candidates.update((collection.CONFIGS / 'layouts').rglob('*.yaml'))
+    saved_layouts = Path(layouts_root).resolve() if layouts_root is not None else None
+    if saved_layouts is not None:
+        candidates.update(saved_layouts.glob('*.yaml'))
     for path in sorted(candidates):
         try:
-            resolved = artifact_file(artifacts, path.relative_to(artifacts))
+            resolved = path.resolve()
+            if resolved == default_layout:
+                relative = recipe['bin_config']
+            elif resolved.is_relative_to(collection.CONFIGS.resolve()):
+                relative = str(resolved.relative_to(collection.HERE))
+            elif saved_layouts is not None and resolved.parent == saved_layouts:
+                relative = str(resolved)
+            else:
+                resolved = artifact_file(artifacts, path.relative_to(artifacts), 'data_saving/bin_model/layouts')
+                relative = str(path.relative_to(artifacts))
             value = data.read_yaml(resolved)
             bins = value.get('bins')
             data.validate_bin_ids(bins)
@@ -131,15 +207,22 @@ def inventory(artifacts, recipe):
             if not isinstance(label, str) or not label.strip():
                 raise data.DatasetError('A layout name must be nonempty text')
             scene_ids.add(scene)
-            layouts.append({'path': str(path.relative_to(artifacts)), 'label': label,
+            layouts.append({'path': relative, 'label': label,
                             'scene_id': scene, 'frame_id': frame, 'bin_ids': list(bins)})
         except errors as error:
             issues.append(f'{path.name}: {error}')
+    for root, directory in ((collection.HERE, LOCAL_CAD_REFERENCE_DIRECTORY),
+                            (artifacts, CAD_REFERENCE_DIRECTORY)):
+        for path in sorted((root / directory).glob('*.yaml')):
+            try:
+                cad_references.append(cad_reference_info(artifacts, path.relative_to(root)))
+            except errors as error:
+                issues.append(f'{path.name}: {error}')
     workflow = _workflow_inventory(artifacts, cameras)
     scene_ids.update(item['scene_id'] for item in workflow['scenes'])
     issues.extend(workflow['issues'])
     return {'scenes': sorted(scene_ids), 'camera_calibrations': cameras, 'robot_calibrations': robots,
-            'layouts': layouts, 'issues': issues, 'eyes_workflow': workflow,
+            'layouts': layouts, 'cad_references': cad_references, 'issues': issues, 'eyes_workflow': workflow,
             'defaults': {key: recipe.get(key) for key in
                          ('scene_id', 'camera_calibration', 'robot_calibration', 'bin_config', 'bin_ids')}}
 
@@ -193,20 +276,20 @@ def _workflow_inventory(artifacts, cameras):
     return result
 
 
-def selected_recipe(artifacts, base, request):
+def selected_recipe(artifacts, base, request, *, layouts_root=None):
     """Resolve a new setup explicitly, without borrowing another scene's bounds."""
     recipe = deepcopy(base)
     scene = request.get('scene_id', recipe['scene_id'])
     if type(scene) is not int or not 0 <= scene <= 255:
         raise data.DatasetError('Scene ID must be an integer from 0 to 255')
     recipe['scene_id'] = scene
-    config = inventory(artifacts, base)
-    for field, collection in (('camera_calibration', 'camera_calibrations'),
+    config = inventory(artifacts, base, layouts_root=layouts_root)
+    for field, category in (('camera_calibration', 'camera_calibrations'),
                               ('robot_calibration', 'robot_calibrations'), ('bin_config', 'layouts')):
         selected = request.get(field, base[field])
-        found = next((item for item in config[collection] if item['path'] == selected), None)
+        found = next((item for item in config[category] if item['path'] == selected), None)
         if found is None:
-            raise data.DatasetError(f'Select an available {field.replace("_", " ")} from the artifacts folder')
+            raise data.DatasetError(f'Select an available {field.replace("_", " ")} from the station setup')
         if field == 'camera_calibration' and found['scene_id'] not in (None, scene):
             raise data.DatasetError('The camera calibration filename identifies a different scene')
         if field == 'robot_calibration':
@@ -226,4 +309,20 @@ def selected_recipe(artifacts, base, request):
         recipe[field] = selected
     if request.get('exposures_ms') is not None:
         recipe['exposure_ms'] = request['exposures_ms']
+    # A visually measured layout is tied to the calibration that produced its
+    # coordinates. Continue to read the shared station files, without copies in
+    # artifacts or silently reusing old bounds after a calibration change.
+    layout = data.read_yaml(collection.resolve_bin_config(artifacts, recipe['bin_config']))
+    if 'calibration_reference' in layout:
+        from model_io import calibration_values
+        expected = layout['calibration_reference']
+        if not isinstance(expected, dict) or not all(key in expected for key in ('camera', 'robot')):
+            raise data.DatasetError('The saved layout calibration is incomplete; create a new visual layout')
+        current = calibration_values(
+            data.read_yaml(artifact_file(artifacts, recipe['camera_calibration'], 'calibration/deployment/camera')),
+            data.read_yaml(artifact_file(artifacts, recipe['robot_calibration'], 'calibration/deployment/robot')),
+            scene, recipe['frame_id'])
+        expected = calibration_values(expected['camera'], expected['robot'], scene, recipe['frame_id'])
+        if current != expected:
+            raise data.DatasetError('Station calibration changed since this layout was measured. Create a new visual layout.')
     return recipe

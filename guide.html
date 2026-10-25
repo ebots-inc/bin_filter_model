@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bin Setup — step-by-step guide</title>
+<style>
+:root{color-scheme:light;--ink:#183448;--muted:#456477;--line:#d5e0e7;--blue:#175d8c;--paper:#f4f7fa}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header,main,footer{max-width:1060px;margin:auto;padding:28px}header{padding-top:36px}h1{font-size:clamp(30px,4vw,44px);line-height:1.15;margin:16px 0}h2{font-size:25px;line-height:1.3;margin:0 0 16px}p{margin:12px 0}a{color:var(--blue);text-underline-offset:3px}a:focus-visible{outline:3px solid #cf8b1a;outline-offset:4px}.back{display:inline-block;font-weight:650}.intro{max-width:810px;color:var(--muted)}.notice{padding:14px 18px;border-left:4px solid #cd9636;background:#fff3d6;border-radius:0 8px 8px 0}.good{border-color:#2c8263;background:#eaf5ef}nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}nav a{background:white;border:1px solid var(--line);border-radius:22px;padding:6px 13px;text-decoration:none;font-size:15px}main{padding-top:0}section{background:white;border:1px solid var(--line);border-radius:14px;padding:26px;margin:0 0 22px;scroll-margin-top:20px}.step{display:inline-grid;place-items:center;width:36px;height:36px;margin-right:10px;background:var(--blue);color:white;border-radius:50%;font-size:20px;vertical-align:middle}li{padding-left:4px;margin:9px 0}ol,ul{padding-left:25px}.button{font-weight:700}figure{margin:24px 0}figure img{display:block;width:100%;height:auto;border-radius:10px}figcaption{font-size:14px;color:var(--muted);margin-top:8px}code{font-size:.88em;background:#edf2f5;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;font-size:15px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#edf3f7}.table-wrap{overflow-x:auto}details{margin-top:15px;padding:12px 16px;border:1px solid var(--line);border-radius:8px}summary{cursor:pointer;font-weight:650}footer{padding-top:0;color:var(--muted);font-size:14px}@media(max-width:640px){header,main,footer{padding:18px}section{padding:20px}body{font-size:16px}h2{font-size:23px}nav a{font-size:14px}}@media print{body{background:white;font-size:11pt}header,main,footer{max-width:none;padding:0}nav,.back{display:none}section{break-inside:avoid;border:0;border-top:1px solid #bbb;border-radius:0;padding:16px 0;margin-bottom:0}h1{font-size:28pt}h2{font-size:17pt}figure{break-inside:avoid}a{color:inherit;text-decoration:none}}
+</style>
+</head>
+<body>
+<header>
+<a class="back" href="/">← Back to Bin Setup</a>
+<h1>Collect a bin model, one step at a time</h1>
+<p class="intro">Use this guide beside the Bin Setup page. Prepare the bins, click the indicated button, and wait for the next instruction. The app captures every selected bin together and never moves the robot.</p>
+<p class="notice"><strong>Before starting:</strong> stop production, park the arm clear of the camera view, and leave the camera and Eyes services running. The integrator must already have configured this station's scene and calibration. You can mark the bins on a picture to create their layout.</p>
+<nav aria-label="Guide steps">
+<a href="#session">1 · Session</a><a href="#layout">Create a layout</a><a href="#cameras">2 · Cameras</a><a href="#empty">3 · Empty bins</a><a href="#resistors">4 · Resistors</a><a href="#filled">5 · Filled bins</a><a href="#cad">6 · Optional CAD</a><a href="#build">7 · Build</a><a href="#deploy">8 · Use model</a><a href="#help">Recovery</a>
+</nav>
+</header>
+<main>
+<section id="session">
+<h2><span class="step">1</span>Open or create a session</h2>
+<p><strong>Continuing a collection?</strong> Select its name and click <span class="button">Open session</span>. It resumes at the first unfinished stage. Keep that session; do not create a replacement for a capture error.</p>
+<p><strong>Starting a new collection?</strong></p>
+<ol>
+<li>Select the commissioned scene, camera calibration and reference frame. Choose a saved bin layout, or <a href="#layout">create one from a picture</a>.</li>
+<li>Check every bin you want to collect. One, two or more bins are supported.</li>
+<li>Enter a readable name such as <code>fremont-resistors-oct25</code>, or leave the name blank for an automatic name.</li>
+<li>Keep the default exposures <strong>4, 8, 12, 16, 20 ms</strong>, unless the station recipe calls for other values. Each value sets both spotlight and structured light on both cameras.</li>
+<li>Click <span class="button">New setup</span>.</li>
+</ol>
+<p>The sidebar prepares a new session. An opened session keeps its saved scene, bins and exposure plan.</p>
+</section>
+<section id="layout">
+<h2>First layout, or bins moved? Mark them on a picture</h2>
+<p><strong>You do not need any coordinate measurements.</strong> Select the station's existing scene and calibration; the app derives each bin's bounds, interior location, height and rim height from a depth capture.</p>
+<ol>
+<li>Click <span class="button">Create bin layout</span> beside the Bin layout selector.</li>
+<li>Empty every bin and leave it mounted in its normal position. Keep the arm out of view. Tick <strong>Every bin is empty, mounted in its usual position, and clear of the arm</strong>.</li>
+<li>Click <span class="button">Check selected scene</span> and wait for <strong>Cameras ready</strong>. Then click <span class="button">Capture empty scene</span>.</li>
+<li>Drag a box <strong>just outside the complete outer edge</strong> of the first bin. Include the <strong>entire flat top rim on all four sides</strong>, keeping neighbouring bins outside. You do not need to trace the curved bowl edge.</li>
+<li>Give the bin a useful name, such as <code>left</code>, <code>right</code> or <code>resistors</code>. Start with a letter, then use letters, numbers, underscores or hyphens (up to 64 characters).</li>
+<li>Click <span class="button">Add another bin</span> and repeat for every bin in the layout. Use <span class="button">Draw again</span> to replace a box or <span class="button">Remove</span> to delete one.</li>
+<li>Click <span class="button">Find bowl and top rim</span>. Check each bin's name, size and picture: <strong>cyan is the measured bowl; orange is the flat top rim</strong>. Compare the whole rim with the original picture. A box can pass the checks while cutting off part of the rim; redraw if a neighbour is included or any rim is missing.</li>
+<li>Enter a readable <strong>Layout name</strong>. Tick <strong>I checked every bin’s bowl and top rim</strong>, then click <span class="button">Save and select layout</span>.</li>
+<li>Return to the sidebar, check the bins, name the collection, and click <span class="button">New setup</span>.</li>
+</ol>
+<figure><img src="/guide/assets/layout-setup.svg" alt="Schematic three-step layout setup: draw around each complete bin, review the cyan bowl and orange rim, then name and save. No coordinate entry is required."><figcaption>Schematic example. Review the real measured surfaces in your station's preview.</figcaption></figure>
+<p>The picture is a top-down depth view: +X points right and +Y points up in the selected reference frame. It can look rotated compared with the camera image or your position at the station.</p>
+<p>Saved layouts and preview evidence stay in local data, outside artifacts. This view is separate from training captures. An opened collection keeps its own saved layout; create a new session to use the new layout.</p>
+<p class="notice">If a usable bowl and rim cannot be found, check that the bins are empty and visible, correct the boxes, or take another view. A layout must pass review before it can be saved; the full training and validation steps follow afterward.</p>
+</section>
+<section id="cameras">
+<h2><span class="step">2</span>Check the camera view</h2>
+<ol>
+<li>Click <span class="button">Check connection</span>. Wait for <strong>Cameras ready</strong>.</li>
+<li>Empty every selected bin. Leave the bins in their normal mounted positions.</li>
+<li>Click <span class="button">Preview cameras</span>.</li>
+<li>Check that the expected bins are visible and the arm is out of view. Resolve a wrong view or orientation before collecting.</li>
+</ol>
+<p>If the connection fails, expand <span class="button">Connection details</span>, fix the listed problem, and check again. Preview captures are separate from the training and validation data.</p>
+</section>
+<section id="empty">
+<h2><span class="step">3</span>Capture empty bins</h2>
+<ol>
+<li>Read the main instruction and check that <strong>all selected bins are completely empty</strong>.</li>
+<li>Click <span class="button">Scene ready — capture exposures</span> once. Keep the scene unchanged while empty training runs.</li>
+<li>When the app asks for fresh empty validation, check the bins are still empty and click Ready again.</li>
+</ol>
+<p>With the default recipe, empty training takes <strong>35 captures</strong> and fresh empty validation takes <strong>15</strong>. Repetitions run automatically. The app pauses before asking you to add parts.</p>
+</section>
+<section id="resistors">
+<h2><span class="step">4</span>Place one resistor in each bin</h2>
+<ol>
+<li>Read the current <strong>location</strong> and <strong>arrangement number</strong>.</li>
+<li>Put <strong>exactly one resistor in every selected bin</strong>, in the named area. A left-side stage means one resistor toward the left side of every selected bin.</li>
+<li>Click <span class="button">Scene ready — capture exposures</span> once.</li>
+<li>Keep all parts still while the complete exposure sweep runs.</li>
+<li>At the next arrangement, rotate or move each bin's resistor within the indicated area. Prepare all bins before clicking Ready again.</li>
+</ol>
+<figure><img src="/guide/assets/capture-cycle.svg" alt="Prepare all bins, click Ready, keep parts still for 4, 8, 12, 16 and 20 ms captures, then move them at the next arrangement."><figcaption>One Ready click runs a loaded arrangement's exposure sweep, then the app waits for your next confirmation.</figcaption></figure>
+<p class="notice good"><strong>Keep parts still between exposures. Change their pose between arrangements.</strong> A loaded arrangement showing <code>0/5</code> needs one Ready click; <code>5/5</code> means that arrangement is complete.</p>
+<figure><img src="/guide/assets/resistor-placements.svg" alt="Six broad placement areas: center, left, right, bottom, top and bottom-left diagonal."><figcaption>Schematic examples. Amber gives a broad direction; the resistor icon is not an exact target.</figcaption></figure>
+<p>Collect three arrangements at each of the six areas: center, left, right, bottom, top and bottom-left diagonal. On a curved bowl, place the resistor naturally on the lower bowl, away from the flat rim and steep wall. There is no required wall distance or physical corner.</p>
+<p><strong>Confirm the station's directions before starting.</strong> The diagrams use bin-local −X/+X for left/right and −Y/+Y for bottom/top. These can differ from the camera image or your view while standing at the machine. Keep the station's convention throughout collection.</p>
+</section>
+<section id="filled">
+<h2><span class="step">5</span>Capture normal and full bins</h2>
+<ol>
+<li>At <strong>normal fill</strong>, add a typical working amount of production parts to every selected bin, spread naturally with some bin surface visible.</li>
+<li>Click Ready and keep the parts still for the sweep.</li>
+<li>Before each of the three arrangements, mix or reposition the parts while keeping roughly the same amount.</li>
+<li>At <strong>full fill</strong>, use a representative full production load within the station's normal limit. Capture three arrangements, changing positions and overlaps between sweeps.</li>
+</ol>
+<p><strong>No exact normal/full part count is required.</strong> Follow the current stage instructions. For the default five exposures:</p>
+<div class="table-wrap"><table><thead><tr><th>Stage</th><th>Captures</th><th>Ready clicks</th></tr></thead><tbody>
+<tr><td>Empty training</td><td>35</td><td>1</td></tr><tr><td>Fresh empty validation</td><td>15</td><td>1</td></tr><tr><td>One resistor: six areas × three arrangements</td><td>90</td><td>18</td></tr><tr><td>Normal fill: three arrangements</td><td>15</td><td>3</td></tr><tr><td>Full fill: three arrangements</td><td>15</td><td>3</td></tr><tr><th>Total, for any number of selected bins</th><th>170</th><th>26</th></tr>
+</tbody></table></div>
+<p>Other recipes and older sessions can have different counts. Follow the opened session's instructions.</p>
+</section>
+<section id="cad">
+<h2><span class="step">6</span>Add CAD if you have it</h2>
+<p><strong>No CAD?</strong> Leave <span class="button">Geometry reference for this build</span> at <strong>Measured captures only</strong> and continue to step 7.</p>
+<p>For a completed collection with CAD:</p>
+<ol>
+<li>Choose the bin's <strong>STL</strong> file, including the nominal flat top rim.</li>
+<li>Choose whether this design applies to all selected bins or one bin, then click <span class="button">Upload CAD</span>. Upload separate files for different shapes.</li>
+<li>For each bin, choose the file's <strong>units</strong>, the axis pointing <strong>up</strong>, and its <strong>yaw</strong>. Ask the CAD author or integrator if these are unknown; STL files do not record units.</li>
+<li>Click <span class="button">Preview CAD placement</span>. Placement uses saved empty-training geometry with fixed scale.</li>
+<li>Review the top view and both cross-sections. <strong>Blue is measured geometry; orange is CAD.</strong> Check that the bowl opens up, its size is right, and its rim and interior align. Correct the choices and preview again if needed.</li>
+<li>After checking every selected bin, tick <strong>I checked the bin size and orientation in every preview</strong>, then click <span class="button">Confirm CAD reference</span>.</li>
+<li>Select that confirmed reference under <span class="button">Geometry reference for this build</span> before building.</li>
+</ol>
+<p>Previously commissioned matching references may also appear in the list. Measured captures still supply the physical surface, including printed or machined differences. CAD does not fill unseen areas or loosen detection thresholds.</p>
+</section>
+<section id="build">
+<h2><span class="step">7</span>Build and validate</h2>
+<ol>
+<li>When all stages are complete, click <span class="button">Build and validate</span>.</li>
+<li>Leave the server terminal running. Follow <span class="button">Activity</span> and wait for the final result.</li>
+<li>Use <span class="button">Review saved results</span> to reopen the report. If checks fail, review the named bin, capture and exposure, then correct the cause before deployment.</li>
+<li>After physical production validation passes, <span class="button">Use this model</span> becomes available.</li>
+</ol>
+<p class="notice good"><strong>Building does not change production.</strong> Activation is a separate step. Each build preserves earlier candidates and captures.</p>
+<p>Only empty training captures fit the model. Fresh empty, resistor and filled captures are held out for checking. A resistor check verifies a target in the instructed broad area, not an exact resistor footprint or grasp.</p>
+</section>
+<section id="deploy">
+<h2><span class="step">8</span>Use the model from HMI</h2>
+<p>This example is for <strong>cell 4, scene 0/B2, bin_a and bin_b</strong>. Other layouts need their matching commissioned workflow.</p>
+<ol>
+<li>Finish collection. Start the station's normal camera, Eyes, updated Perception, Brain and HMI services using the normal station procedure.</li>
+<li>In HMI, select <span class="button">Celestica Contour Map Test</span>. Click <span class="button">Launch</span> and wait for the nodes to be ready. Leave it ready to Run.</li>
+<li>In Bin Setup, click <span class="button">Use this model</span>. Wait for successful activation; the app verifies which model Perception loaded.</li>
+<li>Put parts in both bins and click <span class="button">Run</span> in HMI. The test requests one pose from each bin and does not move the robot.</li>
+</ol>
+<p>An empty bin returns no pose, so both bins need parts for this test to succeed. If the reload service is missing, ask the integrator to start the updated Perception build and load the workflow. Do not treat the error as a successful activation.</p>
+<p><span class="button">Restore previous model</span> restores a recorded earlier deployment when one is available.</p>
+<details><summary>Where files are saved</summary>
+<ul><li>Captures, uploads, previews, candidates and reports: <code>data/bin_model/&lt;session-name&gt;/</code>.</li>
+<li>Runtime <code>model.json</code> and numerical <code>arrays/</code>: <code>ebots_system_artifacts/artifacts_cell_4/calibration/deployment/bin/&lt;model-name&gt;/</code>.</li>
+<li>Shared station calibration: <code>artifacts/calibration/deployment/camera/</code> and <code>robot/</code>.</li>
+<li>Deployment state and rollback history: <code>data/bin_model/deployment/</code>.</li></ul>
+<p>Production uses the existing shared camera and robot calibration. The model records expected values to detect a calibration mismatch. Frozen calibration files stay with offline captures and candidates for replay. Training settings, CAD meshes and reports also stay with the local session.</p>
+<p>The production request does not load or fit an STL.</p>
+</details>
+</section>
+<section id="help">
+<h2>If you need to stop or retry</h2>
+<div class="table-wrap"><table><thead><tr><th>Situation</th><th>Next action</th></tr></thead><tbody>
+<tr><td>Capture failed</td><td>Keep the session. Fix the reported problem and prepare the unfinished arrangement again. Ready preserves the failed attempt and retakes the arrangement's entire exposure sweep.</td></tr>
+<tr><td>Need a pause</td><td>Click <strong>Stop after current capture</strong> and wait. Open session later to continue.</td></tr>
+<tr><td>Waiting for camera buffers after a timeout</td><td>Leave the server running while cleanup finishes. Ask the integrator for help if Eyes cannot finish.</td></tr>
+<tr><td>Browser closed</td><td>Reopen Bin Setup. The server finishes its current stage, then waits for Ready.</td></tr>
+<tr><td>Parts were wrong in an already completed arrangement</td><td>Record the stage name and ask the integrator to reset that stage before building. Do not relabel the saved capture as a different placement.</td></tr>
+<tr><td>Daily empty-bin check</td><td>Choose <strong>New empty check</strong>, collect fresh empty captures, then click <strong>Validate empty check</strong>. This checks the active model without refitting.</td></tr>
+</tbody></table></div>
+<p>To stop the server, press <strong>Ctrl+C</strong> in its terminal. It waits for an active operation to finish. Do not close that terminal while a capture is cleaning up.</p>
+</section>
+</main>
+<footer>
+<p>The complete operator reference is <code>bin_filter_offline/STANDALONE_UI.md</code>. Installation, commissioning and technical recovery instructions are in <code>bin_filter_offline/STATION_SETUP.md</code>.</p>
+<p><a class="back" href="/">← Back to Bin Setup</a></p>
+</footer>
+</body>
+</html>

@@ -31,6 +31,9 @@ PROFILE_FIELDS = {'bias_mm': ('float64_le', 2, True),
                   'capture_support': ('int64_le', 2, False)}
 REGISTRATION_FIELDS = {name: ('float64_le', 2, False)
                        for name in ('surface_xyz_mm', 'boundary_xyz_mm')}
+CAD_FIELDS = {'nominal_height_mm': ('float64_le', 2, True),
+              'apparent_deviation_mm': ('float64_le', 2, True),
+              'association_mask': ('int64_le', 2, False)}
 DTYPES = {'float64_le': np.dtype('<f8'), 'int64_le': np.dtype('<i8')}
 MAX_ARRAY_BYTES = 512 * 1024 * 1024
 
@@ -45,6 +48,8 @@ def _fields(model):
                 raise DatasetError('Model bins must contain mappings')
             yield f'bins/{name}/geometry', field.get('geometry'), ARRAY_FIELDS
             yield f'bins/{name}/registration', field.get('registration'), REGISTRATION_FIELDS
+            if 'cad_reference' in field:
+                yield f'bins/{name}/cad_reference', field['cad_reference'], CAD_FIELDS
             profiles = field.get('camera_profiles')
             if not isinstance(profiles, list):
                 raise DatasetError('Camera profiles must be a list')
@@ -219,3 +224,73 @@ def write_model(output, model, output_format='bundle'):
     finally:
         shutil.rmtree(stage)
     return output / 'model.json'
+
+
+def calibration_values(camera, robot, scene_id, frame_id):
+    """Keep the calibration values used by depth reconstruction and placement."""
+    def vector(value, count, name):
+        if (not isinstance(value, list) or len(value) != count or
+                any(type(item) not in (int, float) or not math.isfinite(item) for item in value)):
+            raise DatasetError(f'Calibration {name} requires {count} finite numbers')
+        return list(value)
+
+    if not isinstance(camera, dict) or not isinstance(robot, dict):
+        raise DatasetError('Camera and robot calibration must be mappings')
+    selected_camera = {key: vector(camera.get(key), count, key)
+                       for key, count in (('world_r', 9), ('world_t', 3))}
+    for name in ('cam1', 'cam2'):
+        item = camera.get(name)
+        if not isinstance(item, dict) or any(type(item.get(key)) is not int or item[key] <= 0
+                                             for key in ('rows', 'cols')):
+            raise DatasetError(f'Calibration {name} requires positive image dimensions')
+        selected_camera[name] = {key: item[key] for key in ('rows', 'cols')}
+        selected_camera[name].update({key: vector(item.get(key), count, f'{name}.{key}')
+                                     for key, count in (('cam_intrinsic', 9), ('cam_extrinsic', 16))})
+    if robot.get('name') != frame_id or not isinstance(robot.get('hand_eye'), list):
+        raise DatasetError(f'Robot calibration must identify frame {frame_id}')
+    entries = [item for item in robot['hand_eye'] if isinstance(item, dict) and
+               type(item.get('scene_id')) is int and item['scene_id'] == scene_id]
+    if len(entries) != 1:
+        raise DatasetError(f'Robot calibration needs exactly one hand-eye entry for scene {scene_id}')
+    return {'camera': selected_camera, 'robot': {'name': frame_id, 'hand_eye': [{
+        'scene_id': scene_id, 'calibration': vector(entries[0].get('calibration'), 6, 'hand_eye')}]}}
+
+
+def calibration_reference(source, model):
+    """Read expected values from runtime metadata or an offline candidate."""
+    source = Path(source).resolve()
+    if source.is_dir():
+        source /= 'model.json'
+    if 'calibration_reference' in model:
+        reference = model['calibration_reference']
+        if not isinstance(reference, dict) or not all(key in reference for key in ('camera', 'robot')):
+            raise DatasetError('Model calibration_reference needs camera and robot values')
+    else:
+        reference = {}
+        for name in ('camera', 'robot'):
+            path = (source.parent / 'calibration' / f'{name}.yaml').resolve()
+            if not path.is_relative_to(source.parent) or not path.is_file():
+                raise DatasetError(f'Missing frozen {name} calibration inside the model bundle')
+            reference[name] = read_yaml(path)
+    return calibration_values(reference['camera'], reference['robot'], model['scene_id'], model['frame_id'])
+
+
+def export_runtime(source, output):
+    """Export measured runtime arrays and small calibration reference metadata.
+
+    CAD guides fitting, but inference uses the resulting measured geometry,
+    rim and camera corrections. CAD diagnostics, meshes, settings and replay
+    results stay with the candidate that produced this deployment.
+    """
+    source, output = Path(source).resolve(), Path(output)
+    if source.is_dir():
+        source /= 'model.json'
+    model = load_model(source)
+    if model.get('model_type') != 'calibrated_bin_background':
+        raise DatasetError('Runtime export requires a calibrated bin model')
+    model['calibration_reference'] = calibration_reference(source, model)
+    model.pop('calibration', None)
+    model.pop('cad_reference_plan', None)
+    for item in model['bins'].values():
+        item.pop('cad_reference', None)
+    return write_model(output, model)
